@@ -42,7 +42,11 @@ jobs:
           mysql user: 'root'
           mysql password: ${{ secrets.MYSQL_PASSWORD }} # GitHub Secrets 탭에서 설정하세요!
 
-      # 6. Docker Compose로 MySQL 서비스 실행 (테스트용)
+      # 6. Docker Compose 설치
+      - name: Install Docker Compose
+        run: sudo curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose && sudo chmod +x /usr/local/bin/docker-compose
+
+      # 7. Docker Compose로 MySQL 서비스 실행 (테스트용)
       - name: Start MySQL for Testing
         run: |
           docker-compose up -d mysql_test
