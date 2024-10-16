@@ -25,9 +25,21 @@ services:
       - 'MYSQL_DATABASE=final'
       - 'MYSQL_ROOT_PASSWORD=1234'
     ports:
-      - '3307:3306'
+      - '3307:3306'  # 호스트의 3307 포트를 사용 (테스트 시에도 동일 포트 사용 가능)
     volumes:
       - mysql-data:/var/lib/mysql
+    networks:
+      - app-network
+
+  mysql_test:
+    image: 'mysql:latest'
+    environment:
+      - 'MYSQL_DATABASE=test_db'
+      - 'MYSQL_ROOT_PASSWORD=1234'
+    ports:
+      - '3308:3306'  # 테스트용 MySQL은 호스트의 3308 포트를 사용
+    volumes:
+      - mysql-test-data:/var/lib/mysql
     networks:
       - app-network
 
@@ -44,6 +56,7 @@ services:
 
 volumes:
   mysql-data:
+  mysql-test-data:
 
 networks:
   app-network:
