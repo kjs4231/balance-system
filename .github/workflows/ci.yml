@@ -72,4 +72,4 @@ jobs:
 
       - name: Push Docker image to Docker Hub
         if: success()
-        run: docker push kjs4231/balance-system 
+        run: docker push kjs4231/balance-system
