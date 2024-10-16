@@ -40,7 +40,7 @@ jobs:
           character set server: 'utf8'
           mysql database: 'final'
           mysql user: 'root'
-          mysql password: ${{ secrets.MYSQL_PASSWORD }} # GitHub Secrets 탭에서 설정하세요!
+          mysql password: ${{ secrets.MYSQL_ROOT_PASSWORD }} # GitHub Secrets 탭에서 설정하세요!
 
       # 6. Docker Compose 설치
       - name: Install Docker Compose
@@ -49,6 +49,7 @@ jobs:
       # 7. Docker Compose로 MySQL 서비스 실행 (테스트용)
       - name: Start MySQL for Testing
         run: |
+          export MYSQL_ROOT_PASSWORD=${{ secrets.MYSQL_ROOT_PASSWORD }}
           docker-compose up -d mysql_test
           # MySQL이 준비될 때까지 대기
           until docker exec $(docker ps -q -f name=mysql_test) mysqladmin ping -h "localhost" --silent; do
@@ -65,7 +66,7 @@ jobs:
           SPRING_PROFILES_ACTIVE: test  # 테스트 프로파일 활성화
           SPRING_DATASOURCE_URL: jdbc:mysql://localhost:3308/test_db
           SPRING_DATASOURCE_USERNAME: root
-          SPRING_DATASOURCE_PASSWORD: 1234
+          SPRING_DATASOURCE_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
           SPRING_DATASOURCE_DRIVER_CLASS_NAME: com.mysql.cj.jdbc.Driver
           SPRING_JPA_HIBERNATE_DDL_AUTO: update
           SPRING_JPA_DATABASE_PLATFORM: org.hibernate.dialect.MySQL8Dialect
