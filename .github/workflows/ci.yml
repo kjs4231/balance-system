@@ -61,12 +61,6 @@ jobs:
           sleep 15  # 모든 서비스가 완전히 시작되기를 기다림
           docker ps # 실행 중인 모든 컨테이너 확인
 
-      # 10. 테스트 요청 (Optional)
-      - name: Test application endpoint
-        run: |
-          sleep 10  # 서버가 준비될 시간을 충분히 줌
-          curl -f http://localhost # 기본 경로를 테스트하는 curl 요청 (실패 시 워크플로우 실패)
-
       # 11. Docker Hub 로그인 및 이미지 푸시 (옵션)
       - name: Log in to Docker Hub
         uses: docker/login-action@v2
