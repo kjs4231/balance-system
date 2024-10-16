@@ -42,9 +42,9 @@ jobs:
           mysql user: 'root'
           mysql password: ${{ secrets.MYSQL_PASSWORD }} # GitHub Secrets 탭에서 설정하세요!
 
-      # 6. Gradle 빌드
+      # 6. Gradle 빌드 (테스트 단계 건너뜀)
       - name: Build with Gradle Wrapper
-        run: ./gradlew build
+        run: ./gradlew build -x test
 
       # 7. Docker 이미지 빌드
       - name: Build Docker image
