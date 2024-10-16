@@ -57,7 +57,7 @@ docker-compose.override.yml
 .docker/
 
 # Ignore any temporary files related to Docker containers
-docker-compose.yml.lock
-docker-compose.yml
-
-/src/main/resources/application.properties
+#docker-compose.yml.lock
+#docker-compose.yml
+#
+#/src/main/resources/application.properties
