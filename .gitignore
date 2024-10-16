@@ -1,0 +1,63 @@
+HELP.md
+.gradle
+build/
+!gradle/wrapper/gradle-wrapper.jar
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+### STS ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+bin/
+!**/src/main/**/bin/
+!**/src/test/**/bin/
+
+### IntelliJ IDEA ###
+.idea
+*.iws
+*.iml
+*.ipr
+out/
+!**/src/main/**/out/
+!**/src/test/**/out/
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+
+### VS Code ###
+.vscode/
+
+# Docker
+*.pid
+*.log
+
+# Ignore Docker volumes
+**/docker-volume-data/
+
+# Ignore Docker Compose override files
+docker-compose.override.yml
+
+# Ignore environment variables file
+.env
+
+# Ignore Docker log files
+**/logs/
+*.log
+
+# Ignore Docker Desktop configuration
+.docker/
+
+# Ignore any temporary files related to Docker containers
+docker-compose.yml.lock
+docker-compose.yml
+
+/src/main/resources/application.properties
