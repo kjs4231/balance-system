@@ -48,16 +48,19 @@ jobs:
           sudo curl -L "https://github.com/docker/compose/releases/download/v2.2.3/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
           sudo chmod +x /usr/local/bin/docker-compose
 
+   
       # 7. Docker Compose로 MySQL 서비스 실행 (테스트용)
       - name: Start MySQL for Testing
         run: |
           MYSQL_PASSWORD=${{ secrets.MYSQL_PASSWORD }} docker-compose up -d mysql_test
-          until docker exec $(docker ps -q -f name=balance-system_mysql_test_1) mysqladmin ping -h "localhost" --silent; do
+          # MySQL이 준비될 때까지 대기
+          until docker exec mysql_test mysqladmin ping -h "localhost" --silent; do
             echo "Waiting for MySQL to be ready..."
             sleep 5
           done
           echo "MySQL is ready"
           docker ps -a  # 실행 중인 모든 컨테이너 확인
+
 
       # 8. Gradle 빌드 및 테스트
       - name: Build and Test with Gradle Wrapper
