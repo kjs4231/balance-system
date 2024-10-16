@@ -33,14 +33,9 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x ./gradlew
 
-      # 5. 환경 변수로 GitHub Secrets 설정값 전달
-      - name: Set environment variables from GitHub Secrets
-        env:
-          SPRING_DATASOURCE_URL: ${{ secrets.SPRING_DATASOURCE_URL }}
-          SPRING_DATASOURCE_USERNAME: ${{ secrets.SPRING_DATASOURCE_USERNAME }}
-          SPRING_DATASOURCE_PASSWORD: ${{ secrets.SPRING_DATASOURCE_PASSWORD }}
-          SPRING_JPA_HIBERNATE_DDL_AUTO: ${{ secrets.SPRING_JPA_HIBERNATE_DDL_AUTO }}
-        run: echo "Environment variables set"
+      # 5. MySQL 컨테이너 시작
+      - name: Start MySQL container
+        run: docker run --name test-mysql -e MYSQL_ROOT_PASSWORD=1234 -e MYSQL_DATABASE=final -p 3306:3306 -d mysql:latest
 
       # 6. Gradle 빌드
       - name: Build with Gradle Wrapper
