@@ -63,7 +63,7 @@ jobs:
         run: ./gradlew build  # 테스트 단계를 포함하여 빌드
         env:
           SPRING_PROFILES_ACTIVE: test  # 테스트 프로파일 활성화
-          SPRING_DATASOURCE_URL: jdbc:mysql://mysql_test:3306/test_db
+          SPRING_DATASOURCE_URL: jdbc:mysql://localhost:3308/test_db
           SPRING_DATASOURCE_USERNAME: root
           SPRING_DATASOURCE_PASSWORD: 1234
           SPRING_DATASOURCE_DRIVER_CLASS_NAME: com.mysql.cj.jdbc.Driver
