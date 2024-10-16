@@ -10,7 +10,7 @@ services:
     environment:
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/final
       SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      SPRING_DATASOURCE_PASSWORD: 1234
       SPRING_DATASOURCE_DRIVER_CLASS_NAME: com.mysql.cj.jdbc.Driver
       SPRING_JPA_HIBERNATE_DDL_AUTO: update
       SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT: org.hibernate.dialect.MySQLDialect
@@ -23,7 +23,7 @@ services:
     image: 'mysql:latest'
     environment:
       - 'MYSQL_DATABASE=final'
-      - 'MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}'
+      - 'MYSQL_ROOT_PASSWORD=1234'
     ports:
       - '3307:3306'  # 호스트의 3307 포트를 사용 (테스트 시에도 동일 포트 사용 가능)
     volumes:
@@ -35,7 +35,7 @@ services:
     image: 'mysql:latest'
     environment:
       - 'MYSQL_DATABASE=test_db'
-      - 'MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}'
+      - 'MYSQL_ROOT_PASSWORD=1234'
     ports:
       - '3308:3306'  # 테스트용 MySQL은 호스트의 3308 포트를 사용
     volumes:
