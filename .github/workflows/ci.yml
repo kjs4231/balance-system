@@ -53,7 +53,7 @@ jobs:
         run: |
           docker-compose up -d mysql_test
           # MySQL이 준비될 때까지 대기
-          until docker exec $(docker ps -q -f name=mysql_test) mysqladmin ping -h "localhost" --silent; do
+          until docker exec $(docker ps -q -f name=balance-system_mysql_test_1) mysqladmin ping -h "localhost" --silent; do
             echo "Waiting for MySQL to be ready..."
             sleep 5
           done
