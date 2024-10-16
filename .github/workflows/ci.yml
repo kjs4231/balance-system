@@ -1,4 +1,4 @@
-name: Java CI/CD with Gradle and Docker
+CI/CD with Gradle and Docker
 
 on:
   push:
@@ -12,22 +12,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-
-    services:
-      mysql:
-        image: mysql:8
-        env:
-          MYSQL_DATABASE: testdb
-          MYSQL_ROOT_PASSWORD: testpass
-          MYSQL_USER: testuser
-          MYSQL_PASSWORD: testpass
-        ports:
-          - 3306:3306
-        options: > 
-          --health-cmd="mysqladmin ping --silent" 
-          --health-interval=10s 
-          --health-timeout=5s 
-          --health-retries=3
 
     steps:
       # 1. 레포지토리 체크아웃
@@ -52,43 +36,34 @@ jobs:
       # 5. 환경 변수로 GitHub Secrets 설정값 전달
       - name: Set environment variables from GitHub Secrets
         env:
-          SPRING_DATASOURCE_URL: "jdbc:mysql://localhost:3306/testdb"
-          SPRING_DATASOURCE_USERNAME: "testuser"
-          SPRING_DATASOURCE_PASSWORD: "testpass"
-          SPRING_JPA_HIBERNATE_DDL_AUTO: "update"
+          SPRING_DATASOURCE_URL: ${{ secrets.SPRING_DATASOURCE_URL }}
+          SPRING_DATASOURCE_USERNAME: ${{ secrets.SPRING_DATASOURCE_USERNAME }}
+          SPRING_DATASOURCE_PASSWORD: ${{ secrets.SPRING_DATASOURCE_PASSWORD }}
+          SPRING_JPA_HIBERNATE_DDL_AUTO: ${{ secrets.SPRING_JPA_HIBERNATE_DDL_AUTO }}
         run: echo "Environment variables set"
 
-      # 6. MySQL 서비스 확인을 위한 대기 시간
-      - name: Wait for MySQL to be ready
-        run: |
-          while ! docker exec $(docker ps -q --filter ancestor=mysql:8) mysqladmin ping --silent; do
-            echo "Waiting for MySQL to be ready..."
-            sleep 5
-          done
-          echo "MySQL is ready!"
-
-      # 7. Gradle 빌드
+      # 6. Gradle 빌드
       - name: Build with Gradle Wrapper
         run: ./gradlew build
 
-      # 8. Docker 이미지 빌드
+      # 7. Docker 이미지 빌드
       - name: Build Docker image
         run: docker build -t kjs4231/balance-system .
 
-      # 9. Docker Compose로 서비스 실행
+      # 8. Docker Compose로 서비스 실행
       - name: Run Docker Compose services
         run: |
           docker-compose up -d
           sleep 15  # 모든 서비스가 완전히 시작되기를 기다림
           docker ps # 실행 중인 모든 컨테이너 확인
 
-      # 10. 테스트 요청 (Optional)
+      # 9. 테스트 요청 (Optional)
       - name: Test application endpoint
         run: |
           sleep 10  # 서버가 준비될 시간을 충분히 줌
           curl -f http://localhost # 기본 경로를 테스트하는 curl 요청 (실패 시 워크플로우 실패)
 
-      # 11. Docker Hub 로그인 및 이미지 푸시 (옵션)
+      # 10. Docker Hub 로그인 및 이미지 푸시 (옵션)
       - name: Log in to Docker Hub
         uses: docker/login-action@v2
         with:
@@ -97,4 +72,4 @@ jobs:
 
       - name: Push Docker image to Docker Hub
         if: success()
-        run: docker push kjs4231/balance-system
+        run: docker push kjs4231/balance-system 
