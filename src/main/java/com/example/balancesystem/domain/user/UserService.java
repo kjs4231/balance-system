@@ -1,26 +1,33 @@
 package com.example.balancesystem.domain.user;
 
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class UserService {
 
     private final UserRepository userRepository;
+    private final BCryptPasswordEncoder bCryptPasswordEncoder;
 
-    public UserService(UserRepository userRepository) {
+    public UserService(UserRepository userRepository, BCryptPasswordEncoder bCryptPasswordEncoder) {
+
         this.userRepository = userRepository;
+        this.bCryptPasswordEncoder = bCryptPasswordEncoder;
     }
 
-    @Transactional
-    public void registerUser(UserDto userDto) {
+    public void joinProcess(UserDto userDto) {
 
-        if (userRepository.existsByUsername(userDto.getUsername())) {
-            throw new IllegalArgumentException("이미 있는 유저입니다.");
+        String username = userDto.getUsername();
+        String password = userDto.getPassword();
+
+        if (userRepository.existsByUsername(username)) {
+            return;
         }
 
-        User user = new User(userDto.getUsername(), userDto.getPassword(), userDto.getRole());
 
-        userRepository.save(user);
+        User data = new User(username, bCryptPasswordEncoder.encode(password));
+
+        userRepository.save(data);
     }
+
 }
