@@ -1,7 +1,7 @@
-package com.example.balancesystem.videohistory;
+package com.example.balancesystem.domain.videohistory;
 
-import com.example.balancesystem.user.User;
-import com.example.balancesystem.video.Video;
+import com.example.balancesystem.domain.video.Video;
+import com.example.balancesystem.domain.user.User;
 import jakarta.persistence.*;
 import lombok.Getter;
 

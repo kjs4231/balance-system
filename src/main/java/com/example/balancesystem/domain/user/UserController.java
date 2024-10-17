@@ -1,4 +1,4 @@
-package com.example.balancesystem.user;
+package com.example.balancesystem.domain.user;
 
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;

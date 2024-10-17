@@ -1,4 +1,4 @@
-package com.example.balancesystem.user;
+package com.example.balancesystem.domain.user;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

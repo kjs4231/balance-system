@@ -1,4 +1,4 @@
-package com.example.balancesystem.ad;
+package com.example.balancesystem.domain.ad;
 
 
 import jakarta.persistence.*;

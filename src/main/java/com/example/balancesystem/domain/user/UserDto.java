@@ -1,4 +1,4 @@
-package com.example.balancesystem.user;
+package com.example.balancesystem.domain.user;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
@@ -8,7 +8,7 @@ public class UserDto {
     @NotBlank(message = "Username is required")
     private String username;
     @NotBlank(message = "Password is required")
-    @Size(min = 8, max = 20, message = "Password must be between 8 and 20 characters")
+    @Size(min = 2, max = 4, message = "Password must be between 8 and 20 characters")
     @Pattern(
             regexp = "^(?=.*[!@#$%^&*(),.?\":{}|<>]).+$",
             message = "Password must contain at least one special character"
