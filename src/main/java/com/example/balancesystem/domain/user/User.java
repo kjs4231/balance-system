@@ -1,42 +1,44 @@
 package com.example.balancesystem.domain.user;
 
-import jakarta.persistence.*;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Pattern;
-import jakarta.validation.constraints.Size;
+
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
 import lombok.Getter;
+import lombok.Setter;
 
 @Entity
 @Getter
-@Table(name = "User")
 public class User {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long userId;
+    private Long id;
 
-    @NotBlank(message = "Username is required")
     private String username;
-    @NotBlank(message = "Password is required")
-    @Size(min = 2, max = 4, message = "Password must be between 8 and 20 characters")
-    @Pattern(
-            regexp = "^(?=.*[!@#$%^&*(),.?\":{}|<>]).+$",
-            message = "Password must contain at least one special character"
-    )
     private String password;
 
-    @Enumerated(EnumType.STRING)
-    private Role role;
+    private String role;
 
-    public User(String username, String password, Role role) {
+    public User() {
+    }
+
+    public User(String username, String password) {
         this.username = username;
         this.password = password;
+    }
+
+    public void setUsername(String username) {
+        this.username = username;
+    }
+
+
+    public void setPassword(String password) {
+        this.password = password;
+    }
+
+    public void setRole(String role) {
         this.role = role;
     }
-
-    protected User() {
-    }
-}
-
-enum Role {
-    USER, ADMIN
 }
