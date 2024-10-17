@@ -87,6 +87,7 @@ jobs:
           else
             echo "Service failed, performing rollback simulation."
             docker-compose down
+          fi
 
       # 11. Docker Hub 로그인 및 이미지 푸시 (옵션)
       - name: Log in to Docker Hub
