@@ -1,5 +1,6 @@
-package com.example.balancesystem.entity;
+package com.example.balancesystem.video;
 
+import com.example.balancesystem.ad.Ad;
 import jakarta.persistence.*;
 import lombok.Getter;
 

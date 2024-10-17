@@ -1,4 +1,4 @@
-package com.example.balancesystem.entity;
+package com.example.balancesystem.ad;
 
 
 import jakarta.persistence.*;

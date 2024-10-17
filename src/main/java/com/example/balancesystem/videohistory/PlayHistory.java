@@ -1,5 +1,7 @@
-package com.example.balancesystem.entity;
+package com.example.balancesystem.videohistory;
 
+import com.example.balancesystem.user.User;
+import com.example.balancesystem.video.Video;
 import jakarta.persistence.*;
 import lombok.Getter;
 
