@@ -2,7 +2,6 @@ package com.example.balancesystem.domain.user;
 
 import jakarta.persistence.*;
 import lombok.Getter;
-import com.example.balancesystem.domain.user.Role;
 
 @Entity
 @Getter
@@ -10,7 +9,7 @@ public class User {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private Long userId;
 
     private String username;
     private String password;

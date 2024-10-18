@@ -8,23 +8,23 @@ import lombok.Getter;
 
 @Entity
 @Getter
-public class RefreshEntity {
+public class Refresh {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private Long refreshId;
 
     private String username;
     private String refresh;
     private String expiration;
 
-    public RefreshEntity(String username, String refresh, String expiration) {
+    public Refresh(String username, String refresh, String expiration) {
         this.username = username;
         this.refresh = refresh;
         this.expiration = expiration;
     }
 
-    public RefreshEntity() {
+    public Refresh() {
 
     }
 }

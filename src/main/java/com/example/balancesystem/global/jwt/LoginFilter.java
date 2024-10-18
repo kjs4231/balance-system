@@ -89,7 +89,7 @@ public class LoginFilter extends UsernamePasswordAuthenticationFilter {
 
         Date date = new Date(System.currentTimeMillis() + expiredMs);
 
-        RefreshEntity refreshEntity = new RefreshEntity(username, refresh, date.toString());
+        Refresh refreshEntity = new Refresh(username, refresh, date.toString());
 
         refreshRepository.save(refreshEntity);
     }
