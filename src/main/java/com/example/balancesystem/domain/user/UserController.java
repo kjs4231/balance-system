@@ -22,7 +22,6 @@ public class UserController {
 
         userService.signup(userDto);
 
-        // 응답으로 "ok"와 HTTP 상태 코드 200 (OK)을 반환
         return ResponseEntity.ok("ok");
     }
 

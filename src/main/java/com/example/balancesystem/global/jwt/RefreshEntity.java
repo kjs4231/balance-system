@@ -18,7 +18,6 @@ public class RefreshEntity {
     private String refresh;
     private String expiration;
 
-    // 모든 필드를 초기화하는 생성자 추가
     public RefreshEntity(String username, String refresh, String expiration) {
         this.username = username;
         this.refresh = refresh;
