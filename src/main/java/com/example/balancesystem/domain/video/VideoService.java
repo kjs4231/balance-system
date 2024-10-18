@@ -18,18 +18,6 @@ public class VideoService {
     private final PlayHistoryService playHistoryService;
     private final AdService adService;
 
-//    @Transactional
-//    public String playVideo(Long userId, Long videoId) {
-//        Video video = videoRepository.findById(videoId)
-//                .orElseThrow(() -> new RuntimeException("동영상을 찾을 수 없습니다"));
-//        User user = userRepository.findById(userId)
-//                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다"));
-//
-//        // 영상 재생 시작 (광고 시청 처리 없음)
-//        return playHistoryService.handlePlay(user, video).getLastPlayedAt() == 0
-//                ? "동영상을 처음부터 재생합니다."
-//                : "동영상을 이어서 재생합니다.";
-//    }
     @Transactional
     public String playVideo(Long userId, Long videoId) {
         Video video = videoRepository.findById(videoId)

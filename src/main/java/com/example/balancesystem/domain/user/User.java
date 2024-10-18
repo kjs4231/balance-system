@@ -15,7 +15,7 @@ public class User {
     private String password;
 
     @Enumerated(EnumType.STRING)
-    private Role role;  // Role 사용
+    private Role role;
 
     public User() {
     }

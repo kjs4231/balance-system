@@ -4,8 +4,6 @@ import com.example.balancesystem.domain.user.User;
 import com.example.balancesystem.domain.video.Video;
 import jakarta.persistence.*;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
 
 @Entity
 @Getter

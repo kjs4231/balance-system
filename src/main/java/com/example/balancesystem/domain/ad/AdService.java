@@ -24,7 +24,6 @@ public class AdService {
                 ad.markAsViewed();
                 adRepository.save(ad);
 
-                // 광고 시청 이력 저장
                 adHistoryService.saveAdHistory(user, ad);
             }
         });

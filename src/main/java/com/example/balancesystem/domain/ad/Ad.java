@@ -27,7 +27,4 @@ public class Ad {
         this.viewed = true;
     }
 
-    public boolean isViewed() {
-        return viewed;
-    }
 }
