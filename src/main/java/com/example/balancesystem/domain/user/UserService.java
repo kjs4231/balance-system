@@ -15,7 +15,7 @@ public class UserService {
         this.bCryptPasswordEncoder = bCryptPasswordEncoder;
     }
 
-    public void joinProcess(UserDto userDto) {
+    public void signup(UserDto userDto) {
 
         String username = userDto.getUsername();
         String password = userDto.getPassword();
@@ -24,9 +24,7 @@ public class UserService {
             return;
         }
 
-
         User data = new User(username, bCryptPasswordEncoder.encode(password));
-
         userRepository.save(data);
     }
 
