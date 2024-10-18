@@ -1,12 +1,8 @@
 package com.example.balancesystem.domain.user;
 
-
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
+import jakarta.persistence.*;
 import lombok.Getter;
-import lombok.Setter;
+import com.example.balancesystem.domain.user.Role;
 
 @Entity
 @Getter
@@ -19,26 +15,27 @@ public class User {
     private String username;
     private String password;
 
-    private String role;
+    @Enumerated(EnumType.STRING)
+    private Role role;  // Role 사용
 
     public User() {
     }
 
-    public User(String username, String password) {
+    public User(String username, String password, Role role) {
         this.username = username;
         this.password = password;
+        this.role = role;
     }
 
     public void setUsername(String username) {
         this.username = username;
     }
 
-
     public void setPassword(String password) {
         this.password = password;
     }
 
-    public void setRole(String role) {
+    public void setRole(Role role) {
         this.role = role;
     }
 }
