@@ -10,21 +10,24 @@ public class UserService {
     private final BCryptPasswordEncoder bCryptPasswordEncoder;
 
     public UserService(UserRepository userRepository, BCryptPasswordEncoder bCryptPasswordEncoder) {
-
         this.userRepository = userRepository;
         this.bCryptPasswordEncoder = bCryptPasswordEncoder;
     }
 
     public void signup(UserDto userDto) {
 
-        String username = userDto.getUsername();
-        String password = userDto.getPassword();
-
-        if (userRepository.existsByUsername(username)) {
+        // 사용자 존재 여부 확인
+        if (userRepository.existsByUsername(userDto.getUsername())) {
             return;
         }
 
-        User data = new User(username, bCryptPasswordEncoder.encode(password));
+
+        Role role = Role.USER;
+        if (userDto.getRole() != null && userDto.getRole().equalsIgnoreCase("admin")) {
+            role = Role.ADMIN;
+        }
+
+        User data = new User(userDto.getUsername(), bCryptPasswordEncoder.encode(userDto.getPassword()), role);
         userRepository.save(data);
     }
 
