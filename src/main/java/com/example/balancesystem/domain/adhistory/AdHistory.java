@@ -24,8 +24,14 @@ public class AdHistory {
     @JoinColumn(name = "ad_id")
     private Ad ad;
 
+    private boolean viewed = false;
+
     public AdHistory(User user, Ad ad) {
         this.user = user;
         this.ad = ad;
+    }
+
+    public void markAsViewed() {
+        this.viewed = true;
     }
 }

@@ -4,6 +4,7 @@ import com.example.balancesystem.domain.ad.AdService;
 import com.example.balancesystem.domain.user.User;
 import com.example.balancesystem.domain.user.UserRepository;
 import com.example.balancesystem.domain.videohistory.PlayHistory;
+import com.example.balancesystem.domain.videohistory.PlayHistoryRepository;
 import com.example.balancesystem.domain.videohistory.PlayHistoryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -16,6 +17,7 @@ public class VideoService {
     private final VideoRepository videoRepository;
     private final UserRepository userRepository;
     private final PlayHistoryService playHistoryService;
+    private final PlayHistoryRepository playHistoryRepository;
     private final AdService adService;
 
     @Transactional
@@ -28,13 +30,11 @@ public class VideoService {
         PlayHistory playHistory = playHistoryService.handlePlay(user, video);
 
         if (playHistory.getLastPlayedAt() == 0) {
-            video.increaseViewCount();
             return "동영상을 처음부터 재생합니다.";
         } else {
             return "동영상을 " + playHistory.getLastPlayedAt() + "초부터 이어서 재생합니다.";
         }
     }
-
     @Transactional
     public void pauseVideo(Long userId, Long videoId, int currentPlayedAt) {
         Video video = videoRepository.findById(videoId)
@@ -42,7 +42,7 @@ public class VideoService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        // 영상 정지 시 광고 시청 처리
+        // 영상 정지 시 광고 시청 처리 (광고 시청 이력 확인 및 업데이트)
         adService.handleAdViews(video, user, currentPlayedAt);
 
         // 영상 정지 이력 저장
@@ -53,7 +53,5 @@ public class VideoService {
             playHistoryService.markCompleted(user, video);
         }
     }
-
-
 
 }

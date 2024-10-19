@@ -17,14 +17,17 @@ public class AdService {
     @Transactional
     public void handleAdViews(Video video, User user, int currentPlayedAt) {
         video.getAds().forEach(ad -> {
-            boolean adAlreadyViewed = adHistoryService.hasUserViewedAd(user, ad);
+            if (currentPlayedAt >= ad.getTriggerTime()) {
+                boolean adAlreadyViewed = adHistoryService.hasUserViewedAd(user, ad);
 
-            if (currentPlayedAt >= ad.getTriggerTime() && !adAlreadyViewed) {
-                ad.increaseViewCount();
-                ad.markAsViewed();
-                adRepository.save(ad);
+                if (!adAlreadyViewed) {
+                    // 광고 시청 횟수 증가 및 시청 완료 처리
+                    ad.increaseViewCount();
+                    adRepository.save(ad);
 
-                adHistoryService.saveAdHistory(user, ad);
+                    // 광고 시청 이력 저장
+                    adHistoryService.saveAdHistory(user, ad);
+                }
             }
         });
     }

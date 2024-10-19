@@ -14,12 +14,14 @@ public class AdHistoryService {
 
     @Transactional(readOnly = true)
     public boolean hasUserViewedAd(User user, Ad ad) {
-        return adHistoryRepository.existsByUserAndAd(user, ad);
+        return adHistoryRepository.existsByUserAndAdAndViewedTrue(user, ad);
     }
 
     @Transactional
     public void saveAdHistory(User user, Ad ad) {
-        AdHistory adHistory = new AdHistory(user, ad);
+        AdHistory adHistory = adHistoryRepository.findByUserAndAd(user, ad)
+                .orElseGet(() -> new AdHistory(user, ad));
+        adHistory.markAsViewed();
         adHistoryRepository.save(adHistory);
     }
 }

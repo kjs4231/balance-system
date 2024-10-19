@@ -8,7 +8,6 @@ import java.util.List;
 
 @Entity
 @Getter
-@Setter
 @Table(name = "video")
 public class Video {
     @Id
@@ -21,8 +20,7 @@ public class Video {
 
     private int viewCount = 0;
 
-    @OneToMany(cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    @JoinColumn(name = "video_id")
+    @ManyToMany(mappedBy = "videos")
     private List<Ad> ads;
 
     public void increaseViewCount() {
@@ -32,4 +30,8 @@ public class Video {
     public List<Ad> getAds() {
         return ads;
     }
+    public void setTitle(String title) {
+        this.title = title;
+    }
+
 }

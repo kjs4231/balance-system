@@ -1,13 +1,16 @@
 package com.example.balancesystem.domain.ad;
 
+import com.example.balancesystem.domain.video.Video;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
+
 @Entity
 @Getter
-@NoArgsConstructor
 @Table(name = "Ad")
+@NoArgsConstructor
 public class Ad {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -15,16 +18,17 @@ public class Ad {
 
     private int viewCount = 0;
 
-    private int triggerTime; // 광고 재생 시작 시점. 이걸 가지고 마지막 시청 시간이 이거 이상일 경우 카운트 하면 됨.
+    private int triggerTime; // 광고 재생 시작 시점
 
-    private boolean viewed = false; // 광고가 시청되었는지 여부
+    @ManyToMany
+    @JoinTable(
+            name = "video_ad",
+            joinColumns = @JoinColumn(name = "ad_id"),
+            inverseJoinColumns = @JoinColumn(name = "video_id")
+    )
+    private List<Video> videos;
 
     public void increaseViewCount() {
         this.viewCount++;
     }
-
-    public void markAsViewed() {
-        this.viewed = true;
-    }
-
 }

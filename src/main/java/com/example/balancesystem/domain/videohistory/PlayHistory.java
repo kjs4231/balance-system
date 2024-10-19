@@ -7,6 +7,7 @@ import lombok.Getter;
 
 @Entity
 @Getter
+@Access(AccessType.FIELD)
 @Table(name = "play_history", uniqueConstraints = {@UniqueConstraint(columnNames = {"user_id", "video_id"})})
 public class PlayHistory {
     @Id

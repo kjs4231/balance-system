@@ -47,6 +47,7 @@ public class PlayHistoryService {
                 .orElseThrow(() -> new RuntimeException("재생 기록을 찾을 수 없습니다"));
 
         playHistory.setCompleted(true);
+        playHistory.setLastPlayedAt(0);
         playHistoryRepository.save(playHistory);
     }
 
