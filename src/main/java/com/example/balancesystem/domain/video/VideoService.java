@@ -38,12 +38,20 @@ public class VideoService {
         PlayHistory playHistory = playHistoryService.handlePlay(user, video);
 
         // 광고 처리 로직 추가
-        adService.handleAdViews(video, user, playHistory.getLastPlayedAt());
+        int lastPlayedAt;
 
-        if (playHistory.getLastPlayedAt() == 0) {
+        // 기존 시청 기록이 있다면 마지막 재생 시점(lastPlayedAt)을 가져와서 재생 시작 위치로 사용
+        if (playHistory.getPlayTime() != 0) {
+            lastPlayedAt = playHistory.getPlayTime(); // 이전 재생 기록의 시간을 사용
+        } else {
+            lastPlayedAt = playHistory.getLastPlayedAt(); // 새로운 row일 경우
+        }
+
+        // 시청 기록에 따른 메시지 처리
+        if (lastPlayedAt == 0) {
             return "동영상을 처음부터 재생합니다.";
         } else {
-            return "동영상을 " + playHistory.getLastPlayedAt() + "초부터 이어서 재생합니다.";
+            return "동영상을 " + lastPlayedAt + "초부터 이어서 재생합니다.";
         }
     }
 
