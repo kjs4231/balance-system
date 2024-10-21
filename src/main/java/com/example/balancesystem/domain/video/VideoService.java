@@ -65,16 +65,25 @@ public class VideoService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다"));
 
-        // 중지된 시점에서 새로운 기록을 남김
+        // 영상이 끝까지 재생되었는지 확인
+        if (currentPlayedAt >= video.getDuration()) {
+            playHistoryService.markCompleted(user, video);  // 완료 상태로 마킹
+
+            // 영상 끝까지 본 경우에도 광고 시청 처리 한 번 더 수행
+            adService.handleAdViews(video, user, currentPlayedAt);
+
+            // 새로운 기록을 추가하지 않고 메서드 종료
+            return;
+        }
+
+        // 영상이 끝까지 재생되지 않은 경우, 중지된 시점에서 새로운 기록을 남김
         playHistoryService.handlePause(user, video, currentPlayedAt);
 
         // 광고 시청 상태 처리 추가
         adService.handleAdViews(video, user, currentPlayedAt);
-
-        if (currentPlayedAt >= video.getDuration()) {
-            playHistoryService.markCompleted(user, video);
-        }
     }
+
+
 
     // 동영상과 광고 저장 메서드
     @Transactional
