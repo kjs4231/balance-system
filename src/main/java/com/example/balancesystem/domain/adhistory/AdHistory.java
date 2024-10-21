@@ -6,6 +6,8 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
+
 @Entity
 @Getter
 @NoArgsConstructor
@@ -26,9 +28,13 @@ public class AdHistory {
 
     private boolean viewed = false;
 
-    public AdHistory(User user, Ad ad) {
+    @Column(nullable = false)
+    private LocalDateTime viewDate;
+
+    public AdHistory(User user, Ad ad, LocalDateTime viewDate) {
         this.user = user;
         this.ad = ad;
+        this.viewDate = viewDate;
     }
 
     public void markAsViewed() {

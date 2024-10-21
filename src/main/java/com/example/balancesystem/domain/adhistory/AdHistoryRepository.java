@@ -9,4 +9,6 @@ import java.util.Optional;
 public interface AdHistoryRepository extends JpaRepository<AdHistory, Long> {
     boolean existsByUserAndAdAndViewedTrue(User user, Ad ad);
     Optional<AdHistory> findByUserAndAd(User user, Ad ad);
+
+    boolean existsByUserAndAd(User user, Ad ad);
 }

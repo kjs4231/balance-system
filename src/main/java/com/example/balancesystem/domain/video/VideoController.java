@@ -23,4 +23,11 @@ public class VideoController {
         return ResponseEntity.ok("동영상 재생을 중단했습니다.");
     }
 
+    // 테스트용 영상 등록.
+    @PostMapping("/save")
+    public ResponseEntity<Video> saveVideo(@RequestBody VideoDto videoDto) {
+        Video savedVideo = videoService.saveVideoWithAds(videoDto);
+        return ResponseEntity.ok(savedVideo);
+    }
+
 }
