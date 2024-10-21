@@ -9,4 +9,7 @@ import java.util.Optional;
 
 public interface PlayHistoryRepository extends JpaRepository<PlayHistory, Long> {
     Optional<PlayHistory> findByUserAndVideoAndIsCompletedFalse(User user, Video video);
+    Optional<PlayHistory> findTopByUserAndVideoAndIsCompletedFalseOrderByViewDateDesc(User user, Video video);
+
+
 }

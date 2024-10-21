@@ -16,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 
 
+
 @Service
 @RequiredArgsConstructor
 public class VideoService {
@@ -38,6 +39,8 @@ public class VideoService {
         PlayHistory playHistory = playHistoryService.handlePlay(user, video);
 
         // 광고 처리 로직 추가
+        adService.handleAdViews(video, user, playHistory.getLastPlayedAt());
+
         int lastPlayedAt;
 
         // 기존 시청 기록이 있다면 마지막 재생 시점(lastPlayedAt)을 가져와서 재생 시작 위치로 사용
@@ -54,9 +57,6 @@ public class VideoService {
             return "동영상을 " + lastPlayedAt + "초부터 이어서 재생합니다.";
         }
     }
-
-
-
 
     @Transactional
     public void pauseVideo(Long userId, Long videoId, int currentPlayedAt) {
