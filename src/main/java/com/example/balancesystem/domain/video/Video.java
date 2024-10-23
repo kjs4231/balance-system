@@ -3,6 +3,7 @@ package com.example.balancesystem.domain.video;
 import com.example.balancesystem.domain.ad.Ad;
 import com.example.balancesystem.domain.user.User;
 import com.example.balancesystem.domain.videoad.VideoAd;
+import com.example.balancesystem.domain.videostats.VideoStatistics;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -31,6 +32,10 @@ public class Video {
     @ManyToOne
     @JoinColumn(name = "owner_id")
     private User owner;
+
+    @OneToMany(mappedBy = "video", cascade = CascadeType.ALL)
+    private List<VideoStatistics> videoStatistics = new ArrayList<>();
+
 
     @OneToMany(mappedBy = "video", cascade = CascadeType.ALL)
     private List<VideoAd> videoAds = new ArrayList<>();
