@@ -22,13 +22,13 @@ public class AdService {
 
     @Transactional
     public void handleAdViews(Video video, User user, int currentPlayedAt) {
-        // video에 연결된 모든 광고 가져오기
+
         List<VideoAd> videoAds = videoAdRepository.findAllByVideo(video);
 
         for (VideoAd videoAd : videoAds) {
             Ad ad = videoAd.getAd();
 
-            // 광고의 등장 시점이 고정된 값이므로 하드코딩된 값을 사용
+
             int adPlayTime = 0;
 
             if (videoAds.indexOf(videoAd) == 0) {

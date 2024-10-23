@@ -10,13 +10,10 @@ import com.example.balancesystem.domain.videoad.VideoAdRepository;
 import com.example.balancesystem.domain.videohistory.PlayHistory;
 import com.example.balancesystem.domain.videohistory.PlayHistoryService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
-import java.util.concurrent.TimeUnit;
-
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -28,7 +25,54 @@ public class VideoService {
     private final VideoAdRepository videoAdRepository;
     private final AdRepository adRepository;
     private final AdService adService;
-    private final RedisTemplate redisTemplate;
+
+    @Transactional
+    public Video saveVideoWithAds(VideoDto videoDto) {
+        User owner = userRepository.findById(videoDto.getOwnerId())
+                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다"));
+
+        Video video = new Video(videoDto.getTitle(), videoDto.getDuration(), owner);
+        videoRepository.save(video);
+
+        // 광고 추가 - 랜덤 광고 매칭
+        addRandomAdsToVideo(video);
+
+        return video;
+    }
+
+    private void addRandomAdsToVideo(Video video) {
+        int duration = video.getDuration();
+
+        // 첫 번째 광고는 5분이 넘으면 추가
+        if (duration >= 300) {
+            addAdToVideo(video);
+        }
+
+        // 두 번째 광고는 10분이 넘으면 추가
+        if (duration >= 600) {
+            addAdToVideo(video);
+        }
+
+        videoRepository.save(video);
+    }
+
+    private void addAdToVideo(Video video) {
+        Ad randomAd = getRandomAd();
+        VideoAd videoAd = new VideoAd(video, randomAd);
+        videoAdRepository.save(videoAd);
+        video.getVideoAds().add(videoAd);
+    }
+
+    private Ad getRandomAd() {
+        List<Ad> ads = adRepository.findAll();
+
+        if (ads.isEmpty()) {
+            throw new RuntimeException("등록된 광고가 없습니다");
+        }
+
+        int randomIndex = (int) (Math.random() * ads.size());
+        return ads.get(randomIndex);
+    }
 
     @Transactional
     public String playVideo(Long userId, Long videoId) {
@@ -37,38 +81,13 @@ public class VideoService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다"));
 
-
-//        String redisKey = "viewing:" + user.getUsername() + ":" + videoId;
-//        if (redisTemplate.hasKey(redisKey)) {
-//            return "30초 내 중복된 요청입니다. 조회수는 카운트되지 않습니다.";
-//        }
-//
-//        // 30초 TTL 설정
-//        redisTemplate.opsForValue().set(redisKey, "viewing", 30, TimeUnit.SECONDS);
-
-
-
-        // 항상 새로운 시청 기록 생성
         PlayHistory playHistory = playHistoryService.handlePlay(user, video);
 
-        // 광고 처리 로직 추가
-        adService.handleAdViews(video, user, playHistory.getLastPlayedAt());
+        handleAdPlayback(video, user, playHistory.getLastPlayedAt());
 
-        int lastPlayedAt;
+        int lastPlayedAt = playHistory.getPlayTime() != 0 ? playHistory.getPlayTime() : playHistory.getLastPlayedAt();
 
-        // 기존 시청 기록이 있다면 마지막 재생 시점(lastPlayedAt)을 가져와서 재생 시작 위치로 사용
-        if (playHistory.getPlayTime() != 0) {
-            lastPlayedAt = playHistory.getPlayTime(); // 이전 재생 기록의 시간을 사용
-        } else {
-            lastPlayedAt = playHistory.getLastPlayedAt(); // 새로운 row일 경우
-        }
-
-        // 시청 기록에 따른 메시지 처리
-        if (lastPlayedAt == 0) {
-            return "동영상을 처음부터 재생합니다.";
-        } else {
-            return "동영상을 " + lastPlayedAt + "초부터 이어서 재생합니다.";
-        }
+        return lastPlayedAt == 0 ? "동영상을 처음부터 재생합니다." : "동영상을 " + lastPlayedAt + "초부터 이어서 재생합니다.";
     }
 
     @Transactional
@@ -78,66 +97,17 @@ public class VideoService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다"));
 
-        // 영상이 끝까지 재생되었는지 확인
         if (currentPlayedAt >= video.getDuration()) {
-            playHistoryService.markCompleted(user, video);  // 완료 상태로 마킹
-
-            // 영상 끝까지 본 경우에도 광고 시청 처리 한 번 더 수행
-            adService.handleAdViews(video, user, currentPlayedAt);
-
-            // 새로운 기록을 추가하지 않고 메서드 종료
+            playHistoryService.markCompleted(user, video);
+            handleAdPlayback(video, user, currentPlayedAt);
             return;
         }
 
-        // 영상이 끝까지 재생되지 않은 경우, 중지된 시점에서 새로운 기록을 남김
         playHistoryService.handlePause(user, video, currentPlayedAt);
+        handleAdPlayback(video, user, currentPlayedAt);
+    }
 
-        // 광고 시청 상태 처리 추가
+    private void handleAdPlayback(Video video, User user, int currentPlayedAt) {
         adService.handleAdViews(video, user, currentPlayedAt);
-    }
-
-
-
-    // 동영상과 광고 저장 메서드
-    @Transactional
-    public Video saveVideoWithAds(VideoDto videoDto) {
-        User owner = userRepository.findById(videoDto.getOwnerId())
-                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다"));
-
-        Video video = new Video(videoDto.getTitle(), videoDto.getDuration(), owner);
-        videoRepository.save(video);
-
-        // 광고 추가
-        addAdsToVideo(video);
-
-        return video;
-    }
-
-    // 동영상 길이에 따른 광고 추가 로직
-    private void addAdsToVideo(Video video) {
-        int duration = video.getDuration();
-
-        // 첫 번째 광고는 5분이 넘으면 추가
-        if (duration >= 300) {
-            Ad ad1 = new Ad();
-            adRepository.save(ad1);
-
-            VideoAd videoAd1 = new VideoAd(video, ad1);
-            videoAdRepository.save(videoAd1);
-            video.getVideoAds().add(videoAd1);
-        }
-
-        // 두 번째 광고는 10분이 넘으면 추가
-        if (duration >= 600) {
-            Ad ad2 = new Ad();
-            adRepository.save(ad2);
-
-            VideoAd videoAd2 = new VideoAd(video, ad2);
-            videoAdRepository.save(videoAd2);
-            video.getVideoAds().add(videoAd2);
-        }
-
-        // 동영상 저장 (추가된 광고 정보 포함)
-        videoRepository.save(video);
     }
 }
