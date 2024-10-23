@@ -5,6 +5,7 @@ import com.example.balancesystem.domain.videoad.VideoAd;
 import com.example.balancesystem.domain.videoad.VideoAdRepository;
 import com.example.balancesystem.domain.video.Video;
 import com.example.balancesystem.domain.adhistory.AdHistoryService;
+import com.example.balancesystem.domain.videoad.VideoAdService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,6 +18,7 @@ public class AdService {
 
     private final VideoAdRepository videoAdRepository;
     private final AdHistoryService adHistoryService;
+    private final VideoAdService videoAdService; // VideoAdService 추가
 
     @Transactional
     public void handleAdViews(Video video, User user, int currentPlayedAt) {
@@ -46,6 +48,9 @@ public class AdService {
                     // 광고를 시청한 적이 없다면 광고 시청 기록을 저장
                     adHistoryService.saveAdHistory(user, ad);
                     System.out.println("광고 시청 기록 저장 완료: 사용자 - " + user.getUsername() + ", 광고 ID - " + ad.getAdId());
+
+                    // 광고 조회수 증가 처리
+                    videoAdService.increaseViewCount(video, ad); // 조회수 증가 로직 추가
                 }
             }
         }

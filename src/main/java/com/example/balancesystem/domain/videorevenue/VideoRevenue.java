@@ -22,7 +22,6 @@ public class VideoRevenue {
     private double adRevenue; // 광고 조회수에 따른 정산 금액
     private double totalRevenue; // 총 정산 금액
 
-    // 기본 생성자 추가
     protected VideoRevenue() {
     }
 

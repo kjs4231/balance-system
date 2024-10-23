@@ -10,11 +10,12 @@ import com.example.balancesystem.domain.videoad.VideoAdRepository;
 import com.example.balancesystem.domain.videohistory.PlayHistory;
 import com.example.balancesystem.domain.videohistory.PlayHistoryService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-
+import java.util.concurrent.TimeUnit;
 
 
 @Service
@@ -27,6 +28,7 @@ public class VideoService {
     private final VideoAdRepository videoAdRepository;
     private final AdRepository adRepository;
     private final AdService adService;
+    private final RedisTemplate redisTemplate;
 
     @Transactional
     public String playVideo(Long userId, Long videoId) {
@@ -34,6 +36,17 @@ public class VideoService {
                 .orElseThrow(() -> new RuntimeException("동영상을 찾을 수 없습니다"));
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다"));
+
+
+//        String redisKey = "viewing:" + user.getUsername() + ":" + videoId;
+//        if (redisTemplate.hasKey(redisKey)) {
+//            return "30초 내 중복된 요청입니다. 조회수는 카운트되지 않습니다.";
+//        }
+//
+//        // 30초 TTL 설정
+//        redisTemplate.opsForValue().set(redisKey, "viewing", 30, TimeUnit.SECONDS);
+
+
 
         // 항상 새로운 시청 기록 생성
         PlayHistory playHistory = playHistoryService.handlePlay(user, video);

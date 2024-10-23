@@ -14,7 +14,7 @@ services:
       SPRING_DATASOURCE_DRIVER_CLASS_NAME: com.mysql.cj.jdbc.Driver
       SPRING_JPA_HIBERNATE_DDL_AUTO: update
       SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT: org.hibernate.dialect.MySQLDialect
-      SPRING_REDIS_HOST: redis-stack-compose  # Redis 컨테이너 이름
+      SPRING_REDIS_HOST: redis-stack  # Redis 서비스 이름으로 수정
       SPRING_REDIS_PORT: 6379  # Redis 기본 포트
       SPRING_REDIS_PASSWORD: 1234  # Redis 비밀번호 설정
     depends_on:
@@ -22,6 +22,7 @@ services:
       - redis-stack  # Redis 의존성 추가
     networks:
       - app-network
+
 
   mysql:
     image: 'mysql:latest'
