@@ -17,4 +17,6 @@ public interface VideoStatisticsRepository extends JpaRepository<VideoStatistics
     default List<VideoStatistics> findWeeklyStatisticsForMonth(Video video, LocalDate startOfMonth, LocalDate endOfMonth) {
         return findByVideoAndStatTypeAndDateBetween(video, StatType.WEEK, startOfMonth, endOfMonth);
     }
+
+    boolean existsByVideoAndStatTypeAndDate(Video video, StatType day, LocalDate date);
 }

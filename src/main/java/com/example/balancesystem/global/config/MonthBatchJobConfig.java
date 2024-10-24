@@ -11,29 +11,26 @@ import org.springframework.batch.repeat.RepeatStatus;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.transaction.PlatformTransactionManager;
-import java.time.LocalDate;
 
 @Configuration
 @EnableBatchProcessing
 @RequiredArgsConstructor
-public class WeekMonthBatchJobConfig {
+public class MonthBatchJobConfig {
 
     private final VideoStatisticsTasklet videoStatisticsTasklet;
 
     @Bean
-    public Job weekMonthStatisticsJob(JobRepository jobRepository, Step weekMonthStatisticsStep) {
-        return new org.springframework.batch.core.job.builder.JobBuilder("weekMonthStatisticsJob", jobRepository)
-                .start(weekMonthStatisticsStep)
+    public Job monthStatisticsJob(JobRepository jobRepository, Step monthStatisticsStep) {
+        return new org.springframework.batch.core.job.builder.JobBuilder("monthStatisticsJob", jobRepository)
+                .start(monthStatisticsStep)
                 .build();
     }
 
     @Bean
-    public Step weekMonthStatisticsStep(JobRepository jobRepository, PlatformTransactionManager transactionManager) {
-        return new StepBuilder("weekMonthStatisticsStep", jobRepository)
+    public Step monthStatisticsStep(JobRepository jobRepository, PlatformTransactionManager transactionManager) {
+        return new StepBuilder("monthStatisticsStep", jobRepository)
                 .tasklet((contribution, chunkContext) -> {
-                    LocalDate now = LocalDate.now();
-                    videoStatisticsTasklet.processStatisticsForWeek(now);
-                    videoStatisticsTasklet.processStatisticsForMonth(now);
+                    videoStatisticsTasklet.processStatisticsForMonth();
                     return RepeatStatus.FINISHED;
                 }, transactionManager)
                 .build();

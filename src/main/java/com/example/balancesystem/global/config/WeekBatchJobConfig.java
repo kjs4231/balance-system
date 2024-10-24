@@ -15,22 +15,22 @@ import org.springframework.transaction.PlatformTransactionManager;
 @Configuration
 @EnableBatchProcessing
 @RequiredArgsConstructor
-public class DayBatchJobConfig {
+public class WeekBatchJobConfig {
 
     private final VideoStatisticsTasklet videoStatisticsTasklet;
 
     @Bean
-    public Job dayStatisticsJob(JobRepository jobRepository, Step dayStatisticsStep) {
-        return new org.springframework.batch.core.job.builder.JobBuilder("dayStatisticsJob", jobRepository)
-                .start(dayStatisticsStep)
+    public Job weekStatisticsJob(JobRepository jobRepository, Step weekStatisticsStep) {
+        return new org.springframework.batch.core.job.builder.JobBuilder("weekStatisticsJob", jobRepository)
+                .start(weekStatisticsStep)
                 .build();
     }
 
     @Bean
-    public Step dayStatisticsStep(JobRepository jobRepository, PlatformTransactionManager transactionManager) {
-        return new StepBuilder("dayStatisticsStep", jobRepository)
+    public Step weekStatisticsStep(JobRepository jobRepository, PlatformTransactionManager transactionManager) {
+        return new StepBuilder("weekStatisticsStep", jobRepository)
                 .tasklet((contribution, chunkContext) -> {
-                    videoStatisticsTasklet.processStatisticsForDay();
+                    videoStatisticsTasklet.processStatisticsForWeek();
                     return RepeatStatus.FINISHED;
                 }, transactionManager)
                 .build();
