@@ -22,7 +22,6 @@ public class VideoStatisticsTasklet {
     private final VideoStatisticsRepository videoStatisticsRepository;
     private final PlayHistoryRepository playHistoryRepository; // PlayHistory Repository 추가
 
-    // 메모리 상에서 중복 처리를 위한 ConcurrentHashMap
     private final ConcurrentHashMap<String, Boolean> processedVideos = new ConcurrentHashMap<>();
 
     // 특정 비디오의 총 재생 시간을 계산하는 메서드
@@ -57,15 +56,26 @@ public class VideoStatisticsTasklet {
     // 주간 통계 생성
     public void processStatisticsForWeek(LocalDate date) {
         LocalDate startOfWeek = date.with(DayOfWeek.MONDAY);
+        LocalDate endOfWeek = date.with(DayOfWeek.SUNDAY);
+
         List<Video> videos = videoRepository.findAll();
         for (Video video : videos) {
             String key = "week_" + video.getVideoId() + "_" + startOfWeek;
             if (processedVideos.putIfAbsent(key, true) == null) {
                 try {
-                    Long viewCount = (long) video.getViewCount();  // int -> Long 변환
-                    Long totalPlayTime = calculateTotalPlayTime(video); // PlayHistory에서 총 재생 시간 계산
+                    // 주간 통계를 생성하기 위해 일일 통계 데이터를 집계
+                    List<VideoStatistics> dailyStatistics = videoStatisticsRepository
+                            .findByVideoAndStatTypeAndDateBetween(video, StatType.DAY, startOfWeek, endOfWeek);
 
-                    VideoStatistics statistics = new VideoStatistics(video, StatType.WEEK, startOfWeek, viewCount, totalPlayTime);
+                    Long totalViewCount = dailyStatistics.stream()
+                            .mapToLong(VideoStatistics::getViewCount)
+                            .sum();
+                    Long totalPlayTime = dailyStatistics.stream()
+                            .mapToLong(VideoStatistics::getTotalPlayTime)
+                            .sum();
+
+                    // 주간 통계 생성
+                    VideoStatistics statistics = new VideoStatistics(video, StatType.WEEK, startOfWeek, totalViewCount, totalPlayTime);
                     videoStatisticsRepository.save(statistics);
                 } catch (DataIntegrityViolationException e) {
                     System.out.println("이미 존재하는 통계 데이터입니다: video_id=" + video.getVideoId() + ", week_start=" + startOfWeek);
@@ -79,15 +89,27 @@ public class VideoStatisticsTasklet {
     // 월간 통계 생성
     public void processStatisticsForMonth(LocalDate date) {
         YearMonth month = YearMonth.from(date);
+        LocalDate startOfMonth = month.atDay(1);
+        LocalDate endOfMonth = month.atEndOfMonth();
+
         List<Video> videos = videoRepository.findAll();
         for (Video video : videos) {
             String key = "month_" + video.getVideoId() + "_" + month;
             if (processedVideos.putIfAbsent(key, true) == null) {
                 try {
-                    Long viewCount = (long) video.getViewCount();  // int -> Long 변환
-                    Long totalPlayTime = calculateTotalPlayTime(video); // PlayHistory에서 총 재생 시간 계산
+                    // 월간 통계를 생성하기 위해 주간 통계 데이터를 집계
+                    List<VideoStatistics> weeklyStatistics = videoStatisticsRepository
+                            .findByVideoAndStatTypeAndDateBetween(video, StatType.WEEK, startOfMonth, endOfMonth);
 
-                    VideoStatistics statistics = new VideoStatistics(video, StatType.MONTH, month.atDay(1), viewCount, totalPlayTime);
+                    Long totalViewCount = weeklyStatistics.stream()
+                            .mapToLong(VideoStatistics::getViewCount)
+                            .sum();
+                    Long totalPlayTime = weeklyStatistics.stream()
+                            .mapToLong(VideoStatistics::getTotalPlayTime)
+                            .sum();
+
+                    // 월간 통계 생성
+                    VideoStatistics statistics = new VideoStatistics(video, StatType.MONTH, startOfMonth, totalViewCount, totalPlayTime);
                     videoStatisticsRepository.save(statistics);
                 } catch (DataIntegrityViolationException e) {
                     System.out.println("이미 존재하는 통계 데이터입니다: video_id=" + video.getVideoId() + ", month=" + month);
@@ -97,4 +119,5 @@ public class VideoStatisticsTasklet {
             }
         }
     }
+
 }
