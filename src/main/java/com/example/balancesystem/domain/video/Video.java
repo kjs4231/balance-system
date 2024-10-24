@@ -13,7 +13,6 @@ import java.util.List;
 
 @Entity
 @Getter
-@Setter
 @Table(name = "video")
 public class Video {
 
@@ -56,4 +55,5 @@ public class Video {
         this.duration = duration;
         this.owner = owner;
     }
+
 }

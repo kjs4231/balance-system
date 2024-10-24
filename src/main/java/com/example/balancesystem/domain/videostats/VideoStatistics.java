@@ -1,3 +1,4 @@
+
 package com.example.balancesystem.domain.videostats;
 
 import com.example.balancesystem.domain.video.Video;
@@ -7,7 +8,9 @@ import lombok.Getter;
 import java.time.LocalDate;
 
 @Entity
-@Table(name = "video_statistics")
+@Table(name = "video_statistics", uniqueConstraints = {
+        @UniqueConstraint(columnNames = {"video_id", "statType", "date"})
+})
 @Getter
 public class VideoStatistics {
 
@@ -21,10 +24,10 @@ public class VideoStatistics {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private StatType statType; // "day", "week", "month"
+    private StatType statType; // "DAY", "WEEK", "MONTH"
 
     @Column(nullable = false)
-    private LocalDate date; // 기준 날짜
+    private LocalDate date; // 통계 기준 날짜
 
     @Column(nullable = false)
     private Long viewCount;
@@ -41,6 +44,5 @@ public class VideoStatistics {
     }
 
     public VideoStatistics() {
-
     }
 }
