@@ -18,7 +18,7 @@ public class PlayHistoryService {
 
     @Transactional
     public PlayHistory handlePlay(User user, Video video) {
-        // 이전 시청 기록 중 가장 최근 기록을 가져옵니다.
+        // 가장 최근의 미완료된 시청 기록을 가져옵니다.
         Optional<PlayHistory> optionalPlayHistory = playHistoryRepository.findTopByUserAndVideoAndIsCompletedFalseOrderByViewDateDesc(user, video);
 
         int startFrom = 0;
@@ -26,41 +26,43 @@ public class PlayHistoryService {
             // 이전 시청 기록이 있으면, 마지막 재생 위치를 가져옵니다.
             PlayHistory previousPlayHistory = optionalPlayHistory.get();
             startFrom = previousPlayHistory.getLastPlayedAt();
-            // 이전 기록을 완료 상태로 설정
+
+            // 이전 기록을 완료 상태로 설정하고 저장합니다.
             previousPlayHistory.setCompleted(true);
             playHistoryRepository.save(previousPlayHistory);
         }
 
-        // 새로운 시청 기록 생성
+        // 새로운 시청 기록을 생성하며, playtime을 초기화하고 startFrom을 lastPlayedAt으로 설정
         PlayHistory newPlayHistory = new PlayHistory(user, video, LocalDateTime.now(), startFrom);
+        newPlayHistory.setPlayTime(0); 
+        newPlayHistory.setLastPlayedAt(startFrom); 
         playHistoryRepository.save(newPlayHistory);
 
-        // 비디오 조회수 증가
         video.increaseViewCount();
 
         return newPlayHistory;
     }
 
+
     @Transactional
     public void handlePause(User user, Video video, int currentPlayedAt) {
-        // 시청 기록이 없는 경우 새로운 기록 생성
         PlayHistory playHistory = playHistoryRepository.findTopByUserAndVideoAndIsCompletedFalseOrderByViewDateDesc(user, video)
-                .orElseGet(() -> {
-                    PlayHistory newHistory = new PlayHistory(user, video, LocalDateTime.now(), 0);
-                    playHistoryRepository.save(newHistory);
-                    return newHistory;
-                });
+                .orElseThrow(() -> new RuntimeException("시청 기록이 없습니다."));
 
-        // 시청 기록의 재생 위치 업데이트
-        playHistory.setLastPlayedAt(currentPlayedAt);
-        playHistoryRepository.save(playHistory);
+        // 현재 재생 위치와 저장된 lastPlayedAt의 차이를 순수 시청 시간으로 설정
+        int purePlayTime = currentPlayedAt - playHistory.getLastPlayedAt();
+        playHistory.setPlayTime(purePlayTime); // 순수 시청 시간 저장
+        playHistory.setLastPlayedAt(currentPlayedAt); // 현재 재생 위치를 lastPlayedAt에 업데이트
 
-        // 재생 위치가 동영상 길이와 같으면 완료로 설정
+        // 영상이 끝까지 재생된 경우 완료로 설정
         if (currentPlayedAt >= video.getDuration()) {
             playHistory.setCompleted(true);
-            playHistoryRepository.save(playHistory);
         }
+
+        playHistoryRepository.save(playHistory);
     }
+
+
 
     @Transactional
     public void markCompleted(User user, Video video) {
@@ -84,4 +86,4 @@ public class PlayHistoryService {
     public void savePlayHistory(PlayHistory playHistory) {
         playHistoryRepository.save(playHistory);
     }
-}
+} 

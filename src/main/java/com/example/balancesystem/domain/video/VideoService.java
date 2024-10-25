@@ -85,9 +85,12 @@ public class VideoService {
 
         handleAdPlayback(video, user, playHistory.getLastPlayedAt());
 
-        int lastPlayedAt = playHistory.getPlayTime() != 0 ? playHistory.getPlayTime() : playHistory.getLastPlayedAt();
+        int lastPlayedAt = playHistory.getLastPlayedAt();
 
-        return lastPlayedAt == 0 ? "동영상을 처음부터 재생합니다." : "동영상을 " + lastPlayedAt + "초부터 이어서 재생합니다.";
+        // 마지막 시청 위치가 0이거나 영상 길이를 초과하면 처음부터 재생
+        return lastPlayedAt == 0 || lastPlayedAt >= video.getDuration()
+                ? "동영상을 처음부터 재생합니다."
+                : "동영상을 " + lastPlayedAt + "초부터 이어서 재생합니다.";
     }
 
     @Transactional
@@ -97,15 +100,10 @@ public class VideoService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다"));
 
-        if (currentPlayedAt >= video.getDuration()) {
-            playHistoryService.markCompleted(user, video);
-            handleAdPlayback(video, user, currentPlayedAt);
-            return;
-        }
-
         playHistoryService.handlePause(user, video, currentPlayedAt);
         handleAdPlayback(video, user, currentPlayedAt);
     }
+
 
     private void handleAdPlayback(Video video, User user, int currentPlayedAt) {
         adService.handleAdViews(video, user, currentPlayedAt);
