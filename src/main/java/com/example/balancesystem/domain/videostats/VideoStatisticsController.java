@@ -20,43 +20,30 @@ public class VideoStatisticsController {
 
     @GetMapping("/run-day-batch-job")
     public String runDayBatchJob(@RequestParam(value = "time", required = false) Long time) {
-        try {
-            JobParameters jobParameters = new JobParametersBuilder()
-                    .addLong("time", time != null ? time : System.currentTimeMillis())
-                    .toJobParameters();
-            jobLauncher.run(dayStatisticsJob, jobParameters);
-            return "Day batch job has been invoked.";
-        } catch (Exception e) {
-            e.printStackTrace();
-            return "Day batch job failed to start.";
-        }
+        return runBatchJob(dayStatisticsJob, "Day batch job", time);
     }
 
     @GetMapping("/run-week-batch-job")
     public String runWeekBatchJob(@RequestParam(value = "time", required = false) Long time) {
-        try {
-            JobParameters jobParameters = new JobParametersBuilder()
-                    .addLong("time", time != null ? time : System.currentTimeMillis())
-                    .toJobParameters();
-            jobLauncher.run(weekStatisticsJob, jobParameters);
-            return "Week batch job has been invoked.";
-        } catch (Exception e) {
-            e.printStackTrace();
-            return "Week batch job failed to start.";
-        }
+        return runBatchJob(weekStatisticsJob, "Week batch job", time);
     }
 
     @GetMapping("/run-month-batch-job")
     public String runMonthBatchJob(@RequestParam(value = "time", required = false) Long time) {
+        return runBatchJob(monthStatisticsJob, "Month batch job", time);
+    }
+
+    // 공통 배치 잡 실행 로직
+    private String runBatchJob(Job job, String jobName, Long time) {
         try {
             JobParameters jobParameters = new JobParametersBuilder()
                     .addLong("time", time != null ? time : System.currentTimeMillis())
                     .toJobParameters();
-            jobLauncher.run(monthStatisticsJob, jobParameters);
-            return "Month batch job has been invoked.";
+            jobLauncher.run(job, jobParameters);
+            return jobName + " has been successfully invoked.";
         } catch (Exception e) {
             e.printStackTrace();
-            return "Month batch job failed to start.";
+            return jobName + " failed to start due to: " + e.getMessage();
         }
     }
 }

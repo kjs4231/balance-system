@@ -32,18 +32,17 @@ public class PlayHistory {
     private boolean isCompleted = false;
 
     @Column(nullable = false)
-    private LocalDateTime viewDate; // 시청 일자 추가
+    private LocalDateTime viewDate;
 
     @Column(nullable = false)
-    private int playTime; // 재생 시간 (초) 추가
+    private int playTime;
 
-    // 생성자에서 기본값 설정
     public PlayHistory(User user, Video video, LocalDateTime viewDate, int playTime) {
         this.user = user;
         this.video = video;
         this.viewDate = viewDate;
         this.playTime = playTime;
-        this.isCompleted = false;  // 기본값 설정
+        this.isCompleted = false;
     }
 
     public PlayHistory() {}
@@ -54,5 +53,9 @@ public class PlayHistory {
 
     public void setCompleted(boolean completed) {
         this.isCompleted = completed;
+    }
+
+    public void setPlayTime(int playTime) {
+        this.playTime = playTime;
     }
 }
