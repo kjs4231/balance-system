@@ -12,7 +12,7 @@ public class VideoAd {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private Long videoAdId;
 
     @ManyToOne
     @JoinColumn(name = "video_id")

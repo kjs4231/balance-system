@@ -17,7 +17,7 @@ public class AdHistory {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private Long adHistoryId;
 
     @ManyToOne
     @JoinColumn(name = "user_id", nullable = false)

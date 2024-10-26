@@ -14,14 +14,13 @@ public interface VideoStatisticsRepository extends JpaRepository<VideoStatistics
     List<VideoStatistics> findByVideoAndStatTypeAndDateBetween(Video video, StatType statType, LocalDate startDate, LocalDate endDate);
 
     // 특정 월간에 해당하는 주간 통계를 조회하는 메서드 (비디오와 월간의 주간 데이터)
-    default List<VideoStatistics> findWeeklyStatisticsForMonth(Video video, LocalDate startOfMonth, LocalDate endOfMonth) {
-        return findByVideoAndStatTypeAndDateBetween(video, StatType.WEEK, startOfMonth, endOfMonth);
-    }
+//    default List<VideoStatistics> findWeeklyStatisticsForMonth(Video video, LocalDate startOfMonth, LocalDate endOfMonth) {
+//        return findByVideoAndStatTypeAndDateBetween(video, StatType.WEEK, startOfMonth, endOfMonth);
+//    }
 
     boolean existsByVideoAndStatTypeAndDate(Video video, StatType day, LocalDate date);
 
     List<VideoStatistics> findTop5ByStatTypeAndDateOrderByViewCountDesc(StatType statType, LocalDate date);
     List<VideoStatistics> findTop5ByStatTypeAndDateOrderByTotalPlayTimeDesc(StatType statType, LocalDate date);
-
 
 }

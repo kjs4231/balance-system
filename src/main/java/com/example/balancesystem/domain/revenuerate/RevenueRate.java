@@ -10,7 +10,7 @@ public class RevenueRate {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private Long revenueRateId;
 
     @Column(name = "min_views", nullable = false)
     private Long minViews; // 조회수 최소 범위

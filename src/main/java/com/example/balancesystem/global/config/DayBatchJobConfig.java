@@ -34,7 +34,6 @@ public class DayBatchJobConfig {
 
     private final VideoRepository videoRepository;
     private final VideoStatisticsRepository videoStatisticsRepository;
-    private final VideoStatisticsService videoStatisticsService;
     private final JobRepository jobRepository;
     private final PlatformTransactionManager transactionManager;
 
