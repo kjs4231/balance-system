@@ -2,14 +2,15 @@ package com.example.balancesystem.global.config;
 
 import com.example.balancesystem.domain.video.Video;
 import com.example.balancesystem.domain.video.VideoRepository;
-import com.example.balancesystem.domain.videohistory.PlayHistory;
 import com.example.balancesystem.domain.videostats.StatType;
 import com.example.balancesystem.domain.videostats.VideoStatistics;
 import com.example.balancesystem.domain.videostats.VideoStatisticsRepository;
+import com.example.balancesystem.domain.videostats.VideoStatisticsService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
 import org.springframework.batch.core.configuration.annotation.EnableBatchProcessing;
+import org.springframework.batch.core.job.builder.JobBuilder;
 import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.batch.core.step.builder.StepBuilder;
 import org.springframework.batch.item.ItemProcessor;
@@ -32,16 +33,19 @@ public class WeekBatchJobConfig {
 
     private final VideoRepository videoRepository;
     private final VideoStatisticsRepository videoStatisticsRepository;
+    private final VideoStatisticsService videoStatisticsService;
+    private final JobRepository jobRepository;
+    private final PlatformTransactionManager transactionManager;
 
     @Bean
-    public Job weekStatisticsJob(JobRepository jobRepository, Step weekStatisticsStep) {
-        return new org.springframework.batch.core.job.builder.JobBuilder("weekStatisticsJob", jobRepository)
-                .start(weekStatisticsStep)
+    public Job weekStatisticsJob() {
+        return new JobBuilder("weekStatisticsJob", jobRepository)
+                .start(weekStatisticsStep())
                 .build();
     }
 
     @Bean
-    public Step weekStatisticsStep(JobRepository jobRepository, PlatformTransactionManager transactionManager) {
+    public Step weekStatisticsStep() {
         return new StepBuilder("weekStatisticsStep", jobRepository)
                 .<Video, VideoStatistics>chunk(10, transactionManager)
                 .reader(weekVideoReader())
@@ -68,7 +72,6 @@ public class WeekBatchJobConfig {
 
             // 주간 통계 데이터가 이미 존재하는지 확인
             if (!videoStatisticsRepository.existsByVideoAndStatTypeAndDate(video, StatType.WEEK, startOfWeek)) {
-                // 해당 주의 일간 통계 데이터를 가져와서 주간 통계 생성
                 List<VideoStatistics> dailyStatistics = videoStatisticsRepository
                         .findByVideoAndStatTypeAndDateBetween(video, StatType.DAY, startOfWeek, endOfWeek);
 
@@ -80,15 +83,12 @@ public class WeekBatchJobConfig {
                             .mapToLong(VideoStatistics::getTotalPlayTime)
                             .sum();
 
-                    // VideoStatistics 생성 및 반환
                     return new VideoStatistics(video, StatType.WEEK, startOfWeek, totalViewCount, totalPlayTime);
                 }
             }
             return null;
         };
     }
-
-
 
     @Bean
     public ItemWriter<VideoStatistics> weekVideoStatisticsWriter() {

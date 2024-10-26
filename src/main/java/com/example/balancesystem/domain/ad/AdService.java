@@ -1,15 +1,17 @@
 package com.example.balancesystem.domain.ad;
 
+import com.example.balancesystem.domain.ad.Ad;
+import com.example.balancesystem.domain.adhistory.AdHistoryService;
 import com.example.balancesystem.domain.user.User;
+import com.example.balancesystem.domain.video.Video;
 import com.example.balancesystem.domain.videoad.VideoAd;
 import com.example.balancesystem.domain.videoad.VideoAdRepository;
-import com.example.balancesystem.domain.video.Video;
-import com.example.balancesystem.domain.adhistory.AdHistoryService;
 import com.example.balancesystem.domain.videoad.VideoAdService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -18,17 +20,14 @@ public class AdService {
 
     private final VideoAdRepository videoAdRepository;
     private final AdHistoryService adHistoryService;
-    private final VideoAdService videoAdService; // VideoAdService 추가
+    private final VideoAdService videoAdService;
 
     @Transactional
     public void handleAdViews(Video video, User user, int currentPlayedAt) {
-
         List<VideoAd> videoAds = videoAdRepository.findAllByVideo(video);
 
         for (VideoAd videoAd : videoAds) {
             Ad ad = videoAd.getAd();
-
-
             int adPlayTime = 0;
 
             if (videoAds.indexOf(videoAd) == 0) {
@@ -42,12 +41,15 @@ public class AdService {
 
             // 현재 시청 시간이 광고 등장 시점 이상일 때만 시청 처리
             if (currentPlayedAt >= adPlayTime) {
-                boolean hasViewed = adHistoryService.hasUserViewedAd(user, ad);
+                LocalDateTime viewDate = LocalDateTime.now();
+
+                // 특정 영상에서 해당 광고를 시청했는지 확인
+                boolean hasViewed = adHistoryService.hasUserViewedAdInVideo(user, ad, video);
 
                 if (!hasViewed) {
                     // 광고를 시청한 적이 없다면 광고 시청 기록을 저장
-                    adHistoryService.saveAdHistory(user, ad);
-                    System.out.println("광고 시청 기록 저장 완료: 사용자 - " + user.getUsername() + ", 광고 ID - " + ad.getAdId());
+                    adHistoryService.saveAdHistory(user, ad, video);
+                    System.out.println("광고 시청 기록 저장 완료: 사용자 - " + user.getUsername() + ", 광고 ID - " + ad.getAdId() + ", 영상 ID - " + video.getVideoId());
 
                     // 광고 조회수 증가 처리
                     videoAdService.increaseViewCount(video, ad); // 조회수 증가 로직 추가

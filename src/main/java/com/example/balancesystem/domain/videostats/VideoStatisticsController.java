@@ -5,9 +5,14 @@ import org.springframework.batch.core.Job;
 import org.springframework.batch.core.JobParameters;
 import org.springframework.batch.core.JobParametersBuilder;
 import org.springframework.batch.core.launch.JobLauncher;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.time.LocalDate;
+import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
@@ -17,6 +22,20 @@ public class VideoStatisticsController {
     private final Job dayStatisticsJob;
     private final Job weekStatisticsJob;
     private final Job monthStatisticsJob;
+    private final VideoStatisticsService videoStatisticsService;
+
+
+    @GetMapping("/top5/view-count/{statType}")
+    public List<String> getTop5ByViewCount(@PathVariable StatType statType,
+                                           @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        return videoStatisticsService.getTop5VideosByViewCount(statType, date);
+    }
+
+    @GetMapping("/top5/play-time/{statType}")
+    public List<String> getTop5ByPlayTime(@PathVariable StatType statType,
+                                          @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        return videoStatisticsService.getTop5VideosByPlayTime(statType, date);
+    }
 
     @GetMapping("/run-day-batch-job")
     public String runDayBatchJob(@RequestParam(value = "time", required = false) Long time) {

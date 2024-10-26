@@ -19,4 +19,9 @@ public interface VideoStatisticsRepository extends JpaRepository<VideoStatistics
     }
 
     boolean existsByVideoAndStatTypeAndDate(Video video, StatType day, LocalDate date);
+
+    List<VideoStatistics> findTop5ByStatTypeAndDateOrderByViewCountDesc(StatType statType, LocalDate date);
+    List<VideoStatistics> findTop5ByStatTypeAndDateOrderByTotalPlayTimeDesc(StatType statType, LocalDate date);
+
+
 }

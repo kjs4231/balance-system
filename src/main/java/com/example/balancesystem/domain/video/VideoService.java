@@ -58,10 +58,24 @@ public class VideoService {
 
     private void addAdToVideo(Video video) {
         Ad randomAd = getRandomAd();
+
+        // 이미 추가된 광고인지 확인
+        boolean adAlreadyAdded = video.getVideoAds().stream()
+                .anyMatch(videoAd -> videoAd.getAd().equals(randomAd));
+
+        if (adAlreadyAdded) {
+            System.out.println("중복 광고가 발견되어 다른 광고를 선택합니다.");
+            // 중복 광고가 발견되었으므로 다시 호출하여 다른 광고를 시도합니다.
+            addAdToVideo(video);
+            return;
+        }
+
+        // 중복이 아니면 광고 추가
         VideoAd videoAd = new VideoAd(video, randomAd);
         videoAdRepository.save(videoAd);
         video.getVideoAds().add(videoAd);
     }
+
 
     private Ad getRandomAd() {
         List<Ad> ads = adRepository.findAll();

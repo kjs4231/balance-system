@@ -9,7 +9,7 @@ import java.util.Optional;
 
 public interface VideoAdRepository extends JpaRepository<VideoAd, Long> {
 
-    Optional<VideoAd> findByVideoAndAd(Video video, Ad ad);
+    List<VideoAd> findByVideoAndAd(Video video, Ad ad);
 
     List<VideoAd> findAllByVideo(Video video);
 }

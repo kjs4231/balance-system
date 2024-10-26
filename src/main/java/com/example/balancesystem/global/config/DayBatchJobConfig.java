@@ -6,10 +6,12 @@ import com.example.balancesystem.domain.videohistory.PlayHistory;
 import com.example.balancesystem.domain.videostats.StatType;
 import com.example.balancesystem.domain.videostats.VideoStatistics;
 import com.example.balancesystem.domain.videostats.VideoStatisticsRepository;
+import com.example.balancesystem.domain.videostats.VideoStatisticsService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
 import org.springframework.batch.core.configuration.annotation.EnableBatchProcessing;
+import org.springframework.batch.core.job.builder.JobBuilder;
 import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.batch.core.step.builder.StepBuilder;
 import org.springframework.batch.item.ItemProcessor;
@@ -32,16 +34,19 @@ public class DayBatchJobConfig {
 
     private final VideoRepository videoRepository;
     private final VideoStatisticsRepository videoStatisticsRepository;
+    private final VideoStatisticsService videoStatisticsService;
+    private final JobRepository jobRepository;
+    private final PlatformTransactionManager transactionManager;
 
     @Bean
-    public Job dayStatisticsJob(JobRepository jobRepository, Step dayStatisticsStep) {
-        return new org.springframework.batch.core.job.builder.JobBuilder("dayStatisticsJob", jobRepository)
-                .start(dayStatisticsStep)
+    public Job dayStatisticsJob() {
+        return new JobBuilder("dayStatisticsJob", jobRepository)
+                .start(dayStatisticsStep())
                 .build();
     }
 
     @Bean
-    public Step dayStatisticsStep(JobRepository jobRepository, PlatformTransactionManager transactionManager) {
+    public Step dayStatisticsStep() {
         return new StepBuilder("dayStatisticsStep", jobRepository)
                 .<Video, VideoStatistics>chunk(10, transactionManager)
                 .reader(videoReader())
@@ -84,7 +89,6 @@ public class DayBatchJobConfig {
             }
         };
     }
-
 
     @Bean
     public ItemWriter<VideoStatistics> dayVideoStatisticsWriter() {
