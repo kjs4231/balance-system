@@ -1,4 +1,3 @@
-
 package com.example.balancesystem.domain.videostats;
 
 import com.example.balancesystem.domain.video.Video;
@@ -9,7 +8,7 @@ import java.time.LocalDate;
 
 @Entity
 @Table(name = "video_statistics", uniqueConstraints = {
-        @UniqueConstraint(columnNames = {"video_id", "statType", "date"})
+        @UniqueConstraint(columnNames = {"video_id", "date"})
 })
 @Getter
 public class VideoStatistics {
@@ -22,10 +21,6 @@ public class VideoStatistics {
     @JoinColumn(name = "video_id", nullable = false)
     private Video video;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private StatType statType; // "DAY", "WEEK", "MONTH"
-
     @Column(nullable = false)
     private LocalDate date; // 통계 기준 날짜
 
@@ -35,12 +30,15 @@ public class VideoStatistics {
     @Column(nullable = false)
     private Long totalPlayTime;
 
-    public VideoStatistics(Video video, StatType statType, LocalDate date, Long viewCount, Long totalPlayTime) {
+    @Column(nullable = false)
+    private Long adViewCount; // 광고 조회수
+
+    public VideoStatistics(Video video, LocalDate date, Long viewCount, Long totalPlayTime, Long adViewCount) {
         this.video = video;
-        this.statType = statType;
         this.date = date;
         this.viewCount = viewCount;
         this.totalPlayTime = totalPlayTime;
+        this.adViewCount = adViewCount;
     }
 
     public VideoStatistics() {

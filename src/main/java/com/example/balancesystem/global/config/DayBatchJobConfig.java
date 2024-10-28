@@ -66,24 +66,27 @@ public class DayBatchJobConfig {
     @Bean
     public ItemProcessor<Video, VideoStatistics> videoProcessor() {
         return video -> {
-            LocalDate today = LocalDate.now(); // 오늘 날짜만 처리
+            LocalDate yesterday = LocalDate.now().minusDays(1);
 
-            // 오늘 날짜에 대한 통계 데이터가 이미 존재하는지 확인
-            if (!videoStatisticsRepository.existsByVideoAndStatTypeAndDate(video, StatType.DAY, today)) {
-                // 오늘 날짜에 해당하는 PlayHistory 데이터를 필터링
+            // 어제 날짜에 대한 통계 데이터가 이미 존재하는지 확인
+            if (!videoStatisticsRepository.existsByVideoAndDate(video, yesterday)) {
+                // 어제 날짜에 해당하는 PlayHistory 데이터를 필터링
                 Long totalPlayTime = video.getPlayHistories().stream()
-                        .filter(playHistory -> playHistory.getViewDate().toLocalDate().equals(today)) // 오늘 날짜의 데이터만 필터링
+                        .filter(playHistory -> playHistory.getViewDate().toLocalDate().equals(yesterday))
                         .mapToLong(PlayHistory::getPlayTime)
                         .sum();
 
                 Long viewCount = video.getPlayHistories().stream()
-                        .filter(playHistory -> playHistory.getViewDate().toLocalDate().equals(today)) // 오늘 날짜의 조회수 계산
+                        .filter(playHistory -> playHistory.getViewDate().toLocalDate().equals(yesterday))
                         .count();
 
-                // VideoStatistics 생성 및 반환
-                return new VideoStatistics(video, StatType.DAY, today, viewCount, totalPlayTime);
+                Long adViewCount = video.getAdHistories().stream()
+                        .filter(adHistory -> adHistory.getViewDate().equals(yesterday))
+                        .count();
+
+                return new VideoStatistics(video, yesterday, viewCount, totalPlayTime, adViewCount);
             } else {
-                System.out.println("중복된 일간 통계 데이터가 감지되었습니다: video_id=" + video.getVideoId() + ", date=" + today);
+                System.out.println("중복된 일간 통계 데이터가 감지되었습니다: video_id=" + video.getVideoId() + ", date=" + yesterday);
                 return null;
             }
         };

@@ -30,29 +30,4 @@ public class BatchScheduler {
         }
     }
 
-    // 주간 통계 배치 작업 실행
-    @Scheduled(cron = "0 0 0 * * MON")  // 매주 월요일 자정 실행
-    public void runWeekStatisticsJob() {
-        try {
-            JobParameters jobParameters = new JobParametersBuilder()
-                    .addLong("time", System.currentTimeMillis()) // 유니크한 파라미터 설정
-                    .toJobParameters();
-            jobLauncher.run(weekStatisticsJob, jobParameters);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-    // 월간 통계 배치 작업 실행
-    @Scheduled(cron = "0 0 0 1 * ?")  // 매월 1일 자정 실행
-    public void runMonthStatisticsJob() {
-        try {
-            JobParameters jobParameters = new JobParametersBuilder()
-                    .addLong("time", System.currentTimeMillis()) // 유니크한 파라미터 설정
-                    .toJobParameters();
-            jobLauncher.run(monthStatisticsJob, jobParameters);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
 }

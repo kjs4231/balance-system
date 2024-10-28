@@ -43,16 +43,6 @@ public class VideoStatisticsController {
         return runBatchJob(dayStatisticsJob, "Day batch job", time);
     }
 
-    @GetMapping("/run-week-batch-job")
-    public String runWeekBatchJob(@RequestParam(value = "time", required = false) Long time) {
-        return runBatchJob(weekStatisticsJob, "Week batch job", time);
-    }
-
-    @GetMapping("/run-month-batch-job")
-    public String runMonthBatchJob(@RequestParam(value = "time", required = false) Long time) {
-        return runBatchJob(monthStatisticsJob, "Month batch job", time);
-    }
-
     // 공통 배치 잡 실행 로직
     private String runBatchJob(Job job, String jobName, Long time) {
         try {

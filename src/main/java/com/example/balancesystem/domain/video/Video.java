@@ -1,5 +1,6 @@
 package com.example.balancesystem.domain.video;
 
+import com.example.balancesystem.domain.adhistory.AdHistory;
 import com.example.balancesystem.domain.user.User;
 import com.example.balancesystem.domain.videohistory.PlayHistory;
 import com.example.balancesystem.domain.videostats.VideoStatistics;
@@ -33,6 +34,9 @@ public class Video {
 
     @OneToMany(mappedBy = "video", cascade = CascadeType.ALL)
     private List<PlayHistory> playHistories = new ArrayList<>();
+
+    @OneToMany(mappedBy = "video")
+    private List<AdHistory> adHistories;
 
     public void increaseViewCount() {
         this.viewCount++;
