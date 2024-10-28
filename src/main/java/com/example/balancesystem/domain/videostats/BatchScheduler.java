@@ -14,11 +14,8 @@ public class BatchScheduler {
 
     private final JobLauncher jobLauncher;
     private final Job dayStatisticsJob;
-    private final Job weekStatisticsJob;
-    private final Job monthStatisticsJob;
 
-    // 일간 통계 배치 작업 실행
-    @Scheduled(cron = "0 0 0 * * ?")  // 매일 자정 실행
+    @Scheduled(cron = "0 0 0 * * ?")
     public void runDayStatisticsJob() {
         try {
             JobParameters jobParameters = new JobParametersBuilder()

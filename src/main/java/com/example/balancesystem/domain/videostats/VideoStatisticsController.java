@@ -7,7 +7,6 @@ import org.springframework.batch.core.JobParametersBuilder;
 import org.springframework.batch.core.launch.JobLauncher;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -21,8 +20,6 @@ public class VideoStatisticsController {
 
     private final JobLauncher jobLauncher;
     private final Job dayStatisticsJob;
-    private final Job weekStatisticsJob;
-    private final Job monthStatisticsJob;
     private final VideoStatisticsService videoStatisticsService;
 
 
@@ -43,7 +40,7 @@ public class VideoStatisticsController {
         return runBatchJob(dayStatisticsJob, "Day batch job", time);
     }
 
-    // 공통 배치 잡 실행 로직
+    // 배치 잡 실행 로직
     private String runBatchJob(Job job, String jobName, Long time) {
         try {
             JobParameters jobParameters = new JobParametersBuilder()

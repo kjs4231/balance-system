@@ -6,7 +6,6 @@ import lombok.Getter;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.Date;
 
 @Entity
 @Getter
@@ -21,10 +20,10 @@ public class VideoRevenue {
     @JoinColumn(name = "video_id")
     private Video video;
 
-    private LocalDate date; // 정산 날짜
-    private BigDecimal viewRevenue; // 업로드 조회수에 따른 정산 금액
-    private BigDecimal adRevenue; // 광고 조회수에 따른 정산 금액
-    private BigDecimal totalRevenue; // 총 정산 금액
+    private LocalDate date;
+    private BigDecimal viewRevenue;
+    private BigDecimal adRevenue;
+    private BigDecimal totalRevenue;
 
     protected VideoRevenue() {
     }

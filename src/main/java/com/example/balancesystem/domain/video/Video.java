@@ -4,7 +4,6 @@ import com.example.balancesystem.domain.adhistory.AdHistory;
 import com.example.balancesystem.domain.user.User;
 import com.example.balancesystem.domain.videohistory.PlayHistory;
 import com.example.balancesystem.domain.videostats.VideoStatistics;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Getter;
 
@@ -19,13 +18,9 @@ public class Video {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long videoId;
-
     private String title;
-
     private int duration;
-
     private int viewCount = 0;
-
     @ManyToOne
     @JoinColumn(name = "owner_id")
     private User owner;

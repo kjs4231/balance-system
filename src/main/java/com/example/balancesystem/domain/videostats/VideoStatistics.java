@@ -22,7 +22,7 @@ public class VideoStatistics {
     private Video video;
 
     @Column(nullable = false)
-    private LocalDate date; // 통계 기준 날짜
+    private LocalDate date;
 
     @Column(nullable = false)
     private Long viewCount;
@@ -31,7 +31,7 @@ public class VideoStatistics {
     private Long totalPlayTime;
 
     @Column(nullable = false)
-    private Long adViewCount; // 광고 조회수
+    private Long adViewCount;
 
     public VideoStatistics(Video video, LocalDate date, Long viewCount, Long totalPlayTime, Long adViewCount) {
         this.video = video;
