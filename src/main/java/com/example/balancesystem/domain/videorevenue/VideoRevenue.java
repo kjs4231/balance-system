@@ -4,6 +4,8 @@ import com.example.balancesystem.domain.video.Video;
 import jakarta.persistence.*;
 import lombok.Getter;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.Date;
 
 @Entity
@@ -19,15 +21,15 @@ public class VideoRevenue {
     @JoinColumn(name = "video_id")
     private Video video;
 
-    private Date date; // 정산 날짜
-    private double viewRevenue; // 업로드 조회수에 따른 정산 금액
-    private double adRevenue; // 광고 조회수에 따른 정산 금액
-    private double totalRevenue; // 총 정산 금액
+    private LocalDate date; // 정산 날짜
+    private BigDecimal viewRevenue; // 업로드 조회수에 따른 정산 금액
+    private BigDecimal adRevenue; // 광고 조회수에 따른 정산 금액
+    private BigDecimal totalRevenue; // 총 정산 금액
 
     protected VideoRevenue() {
     }
 
-    public VideoRevenue(Video video, Date date, double viewRevenue, double adRevenue, double totalRevenue) {
+    public VideoRevenue(Video video, LocalDate date, BigDecimal viewRevenue, BigDecimal adRevenue, BigDecimal totalRevenue) {
         this.video = video;
         this.date = date;
         this.viewRevenue = viewRevenue;

@@ -12,10 +12,10 @@ public class RevenueRate {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long revenueRateId;
 
-    @Column(name = "min_views", nullable = false)
+    @Column(name = "min_views", nullable = true)
     private Long minViews; // 조회수 최소 범위
 
-    @Column(name = "max_views", nullable = false)
+    @Column(name = "max_views", nullable = true)
     private Long maxViews; // 조회수 최대 범위
 
     @Column(name = "rate", nullable = false)

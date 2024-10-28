@@ -4,6 +4,7 @@ import com.example.balancesystem.domain.adhistory.AdHistory;
 import com.example.balancesystem.domain.user.User;
 import com.example.balancesystem.domain.videohistory.PlayHistory;
 import com.example.balancesystem.domain.videostats.VideoStatistics;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Getter;
 
@@ -28,6 +29,7 @@ public class Video {
     @ManyToOne
     @JoinColumn(name = "owner_id")
     private User owner;
+
 
     @OneToMany(mappedBy = "video", cascade = CascadeType.ALL)
     private List<VideoStatistics> videoStatistics = new ArrayList<>();

@@ -22,7 +22,7 @@ public class BatchScheduler {
     public void runDayStatisticsJob() {
         try {
             JobParameters jobParameters = new JobParametersBuilder()
-                    .addLong("time", System.currentTimeMillis()) // 유니크한 파라미터 설정
+                    .addLong("time", System.currentTimeMillis())
                     .toJobParameters();
             jobLauncher.run(dayStatisticsJob, jobParameters);
         } catch (Exception e) {

@@ -1,6 +1,8 @@
 package com.example.balancesystem.domain.videostats;
 
 import com.example.balancesystem.domain.video.Video;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -18,5 +20,6 @@ public interface VideoStatisticsRepository extends JpaRepository<VideoStatistics
     List<VideoStatistics> findTop5ByDateBetweenOrderByTotalPlayTimeDesc(LocalDate startDate, LocalDate endDate);
 
     boolean existsByVideoAndDate(Video video, LocalDate date);
+    Page<VideoStatistics> findByDate(LocalDate date, Pageable pageable);
 
 }
