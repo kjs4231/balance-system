@@ -68,7 +68,7 @@ public class DayBatchJobConfig {
     @Bean
     public Step dayRevenueStep() {
         return new StepBuilder("dayRevenueStep", jobRepository)
-                .<VideoStatistics, VideoRevenue>chunk(10, transactionManager) // 명시적인 제네릭 타입 지정
+                .<VideoStatistics, VideoRevenue>chunk(10, transactionManager)
                 .reader(revenueReader())
                 .processor(revenueProcessor())
                 .writer(revenueWriter())
