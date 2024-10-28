@@ -93,6 +93,13 @@ public class DayBatchJobConfig {
             long viewCount = videoStatistics.getViewCount();
             long adViewCount = videoStatistics.getAdViewCount();
 
+
+            if (videoRevenueRepository.existsByVideoAndDate(videoStatistics.getVideo(), videoStatistics.getDate())) {
+                System.out.println("중복된 정산 데이터가 이미 존재합니다: video_id=" + videoStatistics.getVideo().getVideoId() + ", date=" + videoStatistics.getDate());
+                return null;
+            }
+
+
             RevenueRate viewRate = revenueRateRepository.findRateByViewsAndType(viewCount, RevenueType.VIDEO);
             RevenueRate adRate = revenueRateRepository.findRateByViewsAndType(adViewCount, RevenueType.AD);
 
@@ -148,7 +155,7 @@ public class DayBatchJobConfig {
 
                 return new VideoStatistics(video, yesterday, viewCount, totalPlayTime, adViewCount);
             } else {
-                System.out.println("중복된 일간 통계 데이터가 감지되었습니다: video_id=" + video.getVideoId() + ", date=" + yesterday);
+                System.out.println("중복된 통계 데이터가 이미 존재합니다: video_id=" + video.getVideoId() + ", date=" + yesterday);
                 return null;
             }
         };
