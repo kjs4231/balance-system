@@ -7,7 +7,7 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 
 @Entity
 @Getter
@@ -28,23 +28,16 @@ public class AdHistory {
     private Ad ad;
 
     @ManyToOne
-    @JoinColumn(name = "video_id", nullable = false)  // 새로운 필드 추가
+    @JoinColumn(name = "video_id", nullable = false)
     private Video video;
 
-    private boolean viewed = false;
-
     @Column(nullable = false)
-    private LocalDateTime viewDate;
+    private LocalDate viewDate;
 
-    public AdHistory(User user, Ad ad, Video video, LocalDateTime viewDate) {
+    public AdHistory(User user, Ad ad, Video video, LocalDate viewDate) {
         this.user = user;
         this.ad = ad;
         this.video = video;
         this.viewDate = viewDate;
-        this.viewed = true;
-    }
-
-    public void markAsViewed() {
-        this.viewed = true;
     }
 }

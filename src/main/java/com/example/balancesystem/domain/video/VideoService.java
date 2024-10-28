@@ -1,19 +1,13 @@
 package com.example.balancesystem.domain.video;
 
-import com.example.balancesystem.domain.ad.Ad;
-import com.example.balancesystem.domain.ad.AdRepository;
 import com.example.balancesystem.domain.ad.AdService;
 import com.example.balancesystem.domain.user.User;
 import com.example.balancesystem.domain.user.UserRepository;
-import com.example.balancesystem.domain.videoad.VideoAd;
-import com.example.balancesystem.domain.videoad.VideoAdRepository;
 import com.example.balancesystem.domain.videohistory.PlayHistory;
 import com.example.balancesystem.domain.videohistory.PlayHistoryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -22,68 +16,15 @@ public class VideoService {
     private final VideoRepository videoRepository;
     private final UserRepository userRepository;
     private final PlayHistoryService playHistoryService;
-    private final VideoAdRepository videoAdRepository;
-    private final AdRepository adRepository;
     private final AdService adService;
 
     @Transactional
-    public Video saveVideoWithAds(VideoDto videoDto) {
+    public Video saveVideo(VideoDto videoDto) {
         User owner = userRepository.findById(videoDto.getOwnerId())
                 .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다"));
 
         Video video = new Video(videoDto.getTitle(), videoDto.getDuration(), owner);
-        videoRepository.save(video);
-
-        // 광고 추가 - 랜덤 광고 매칭
-        addRandomAdsToVideo(video);
-
-        return video;
-    }
-
-    private void addRandomAdsToVideo(Video video) {
-        int duration = video.getDuration();
-
-        // 첫 번째 광고는 5분이 넘으면 추가
-        if (duration >= 300) {
-            addAdToVideo(video);
-        }
-
-        // 두 번째 광고는 10분이 넘으면 추가
-        if (duration >= 600) {
-            addAdToVideo(video);
-        }
-
-        videoRepository.save(video);
-    }
-
-    private void addAdToVideo(Video video) {
-        Ad randomAd = getRandomAd();
-
-        // 이미 추가된 광고인지 확인
-        boolean adAlreadyAdded = video.getVideoAds().stream()
-                .anyMatch(videoAd -> videoAd.getAd().equals(randomAd));
-
-        if (adAlreadyAdded) {
-            System.out.println("중복 광고가 발견되어 다른 광고를 선택합니다.");
-            addAdToVideo(video);
-            return;
-        }
-
-        VideoAd videoAd = new VideoAd(video, randomAd);
-        videoAdRepository.save(videoAd);
-        video.getVideoAds().add(videoAd);
-    }
-
-
-    private Ad getRandomAd() {
-        List<Ad> ads = adRepository.findAll();
-
-        if (ads.isEmpty()) {
-            throw new RuntimeException("등록된 광고가 없습니다");
-        }
-
-        int randomIndex = (int) (Math.random() * ads.size());
-        return ads.get(randomIndex);
+        return videoRepository.save(video);
     }
 
     @Transactional
@@ -95,11 +36,11 @@ public class VideoService {
 
         PlayHistory playHistory = playHistoryService.handlePlay(user, video);
 
+        // 광고 재생 처리
         handleAdPlayback(video, user, playHistory.getLastPlayedAt());
 
         int lastPlayedAt = playHistory.getLastPlayedAt();
 
-        // 마지막 시청 위치가 0이거나 영상 길이를 초과하면 처음부터 재생
         return lastPlayedAt == 0 || lastPlayedAt >= video.getDuration()
                 ? "동영상을 처음부터 재생합니다."
                 : "동영상을 " + lastPlayedAt + "초부터 이어서 재생합니다.";
@@ -113,10 +54,12 @@ public class VideoService {
                 .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다"));
 
         playHistoryService.handlePause(user, video, currentPlayedAt);
+
+        // 광고 재생 처리
         handleAdPlayback(video, user, currentPlayedAt);
     }
 
-
+    // 광고 재생 로직을 AdService로 위임
     private void handleAdPlayback(Video video, User user, int currentPlayedAt) {
         adService.handleAdViews(video, user, currentPlayedAt);
     }

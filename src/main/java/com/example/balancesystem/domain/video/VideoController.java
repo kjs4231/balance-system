@@ -26,8 +26,7 @@ public class VideoController {
     // 테스트용 영상 등록.
     @PostMapping("/save")
     public ResponseEntity<Video> saveVideo(@RequestBody VideoDto videoDto) {
-        Video savedVideo = videoService.saveVideoWithAds(videoDto);
+        Video savedVideo = videoService.saveVideo(videoDto);
         return ResponseEntity.ok(savedVideo);
     }
-
 }

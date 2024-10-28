@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Service
@@ -16,17 +17,19 @@ public class AdHistoryService {
     private final AdHistoryRepository adHistoryRepository;
 
     @Transactional(readOnly = true)
-    public boolean hasUserViewedAdInVideo(User user, Ad ad, Video video) {
-        boolean exists = adHistoryRepository.existsByUserAndAdAndVideoAndViewedTrue(user, ad, video);
-        System.out.println("광고 시청 여부 확인: 사용자 - " + user.getUsername() + ", 광고 ID - " + ad.getAdId() + ", 영상 ID - " + video.getVideoId() + ", 시청 여부 - " + exists);
-        return exists;
+    public boolean hasUserViewedAd(User user, Ad ad, Video video) {
+        LocalDate today = LocalDate.now();
+        return adHistoryRepository.existsByUserAndAdAndVideoAndViewDate(user, ad, video, today);
     }
 
     @Transactional
-    public void saveAdHistory(User user, Ad ad, Video video) {
-        AdHistory adHistory = new AdHistory(user, ad, video, LocalDateTime.now());
-        adHistory.markAsViewed(); // 광고 시청 기록 업데이트
-        adHistoryRepository.save(adHistory);
-        System.out.println("광고 시청 기록을 저장했습니다: 사용자 - " + user.getUsername() + ", 광고 ID - " + ad.getAdId() + ", 영상 ID - " + video.getVideoId());
+    public void saveAdHistory(User user, Ad ad, Video video, LocalDate viewDate) {
+        if (!hasUserViewedAd(user, ad, video)) {
+            AdHistory adHistory = new AdHistory(user, ad, video, viewDate);
+            adHistoryRepository.save(adHistory);
+            System.out.println("광고 시청 기록이 저장되었습니다: 사용자 - " + user.getUsername() + ", 광고 ID - " + ad.getAdId());
+        } else {
+            System.out.println("중복된 광고 시청 기록으로 인해 저장이 생략되었습니다.");
+        }
     }
 }

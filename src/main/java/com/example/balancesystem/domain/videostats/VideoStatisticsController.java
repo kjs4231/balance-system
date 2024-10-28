@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequiredArgsConstructor
@@ -25,16 +26,16 @@ public class VideoStatisticsController {
     private final VideoStatisticsService videoStatisticsService;
 
 
-    @GetMapping("/top5/view-count/{statType}")
-    public List<String> getTop5ByViewCount(@PathVariable StatType statType,
-                                           @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
-        return videoStatisticsService.getTop5VideosByViewCount(statType, date);
+    @GetMapping("/top5/view-count")
+    public Map<String, List<String>> getTop5ByViewCount(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        return videoStatisticsService.getTop5ByViewCount(date);
     }
 
-    @GetMapping("/top5/play-time/{statType}")
-    public List<String> getTop5ByPlayTime(@PathVariable StatType statType,
-                                          @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
-        return videoStatisticsService.getTop5VideosByPlayTime(statType, date);
+    @GetMapping("/top5/play-time")
+    public Map<String, List<String>> getTop5ByPlayTime(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        return videoStatisticsService.getTop5ByPlayTime(date);
     }
 
     @GetMapping("/run-day-batch-job")
