@@ -21,6 +21,7 @@ public class Video {
     private String title;
     private int duration;
     private int viewCount = 0;
+    private int adViewCount = 0;
     @ManyToOne
     @JoinColumn(name = "owner_id")
     private User owner;
@@ -37,6 +38,9 @@ public class Video {
 
     public void increaseViewCount() {
         this.viewCount++;
+    }
+    public void increaseAdViewCount() {
+        this.adViewCount++;
     }
 
     public Video() {}

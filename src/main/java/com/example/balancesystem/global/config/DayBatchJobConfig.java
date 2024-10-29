@@ -5,13 +5,10 @@ import com.example.balancesystem.domain.revenuerate.RevenueRateRepository;
 import com.example.balancesystem.domain.revenuerate.RevenueType;
 import com.example.balancesystem.domain.video.Video;
 import com.example.balancesystem.domain.video.VideoRepository;
-import com.example.balancesystem.domain.videohistory.PlayHistory;
 import com.example.balancesystem.domain.videorevenue.VideoRevenue;
 import com.example.balancesystem.domain.videorevenue.VideoRevenueRepository;
-import com.example.balancesystem.domain.videostats.StatType;
 import com.example.balancesystem.domain.videostats.VideoStatistics;
 import com.example.balancesystem.domain.videostats.VideoStatisticsRepository;
-import com.example.balancesystem.domain.videostats.VideoStatisticsService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
@@ -33,6 +30,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.Collections;
+import java.util.List;
 
 @Configuration
 @EnableBatchProcessing
@@ -41,7 +39,6 @@ import java.util.Collections;
 public class DayBatchJobConfig {
 
     private final VideoRepository videoRepository;
-    private final VideoStatisticsRepository videoStatisticsRepository;
     private final VideoRevenueRepository videoRevenueRepository;
     private final RevenueRateRepository revenueRateRepository;
     private final JobRepository jobRepository;
@@ -50,78 +47,19 @@ public class DayBatchJobConfig {
     @Bean
     public Job dayStatisticsJob() {
         return new JobBuilder("dayStatisticsJob", jobRepository)
-                .start(dayStatisticsStep())
-                .next(dayRevenueStep())
-                .build();
-    }
-
-    @Bean
-    public Step dayStatisticsStep() {
-        return new StepBuilder("dayStatisticsStep", jobRepository)
-                .<Video, VideoStatistics>chunk(10, transactionManager)
-                .reader(videoReader())
-                .processor(videoProcessor())
-                .writer(dayVideoStatisticsWriter())
+                .start(dayRevenueStep())
                 .build();
     }
 
     @Bean
     public Step dayRevenueStep() {
         return new StepBuilder("dayRevenueStep", jobRepository)
-                .<VideoStatistics, VideoRevenue>chunk(10, transactionManager)
-                .reader(revenueReader())
+                .<Video, VideoRevenue>chunk(10, transactionManager)
+                .reader(videoReader())
                 .processor(revenueProcessor())
                 .writer(revenueWriter())
                 .build();
     }
-
-
-    private ItemReader<VideoStatistics> revenueReader() {
-        RepositoryItemReader<VideoStatistics> reader = new RepositoryItemReader<>();
-        reader.setRepository(videoStatisticsRepository);
-        reader.setMethodName("findByDate");
-        reader.setArguments(Collections.singletonList(LocalDate.now().minusDays(1)));
-        reader.setPageSize(10);
-        reader.setSort(Collections.singletonMap("video.videoId", Sort.Direction.ASC));
-        return reader;
-    }
-
-
-    @Bean
-    public ItemProcessor<VideoStatistics, VideoRevenue> revenueProcessor() {
-        return videoStatistics -> {
-            long viewCount = videoStatistics.getViewCount();
-            long adViewCount = videoStatistics.getAdViewCount();
-
-
-            if (videoRevenueRepository.existsByVideoAndDate(videoStatistics.getVideo(), videoStatistics.getDate())) {
-                System.out.println("중복된 정산 데이터가 이미 존재합니다: video_id=" + videoStatistics.getVideo().getVideoId() + ", date=" + videoStatistics.getDate());
-                return null;
-            }
-
-
-            RevenueRate viewRate = revenueRateRepository.findRateByViewsAndType(viewCount, RevenueType.VIDEO);
-            RevenueRate adRate = revenueRateRepository.findRateByViewsAndType(adViewCount, RevenueType.AD);
-
-            BigDecimal viewRevenue = BigDecimal.valueOf(viewRate.getRate()).multiply(BigDecimal.valueOf(viewCount)).setScale(0, RoundingMode.DOWN);
-            BigDecimal adRevenue = BigDecimal.valueOf(adRate.getRate()).multiply(BigDecimal.valueOf(adViewCount)).setScale(0, RoundingMode.DOWN);
-            BigDecimal totalRevenue = viewRevenue.add(adRevenue);
-
-            return new VideoRevenue(videoStatistics.getVideo(), videoStatistics.getDate(), viewRevenue, adRevenue, totalRevenue);
-        };
-    }
-
-
-
-    @Bean
-    public ItemWriter<VideoRevenue> revenueWriter() {
-        return revenues -> {
-            for (VideoRevenue revenue : revenues) {
-                videoRevenueRepository.save(revenue);
-            }
-        };
-    }
-
 
     @Bean
     public RepositoryItemReader<Video> videoReader() {
@@ -133,41 +71,77 @@ public class DayBatchJobConfig {
     }
 
     @Bean
-    public ItemProcessor<Video, VideoStatistics> videoProcessor() {
+    public ItemProcessor<Video, VideoRevenue> revenueProcessor() {
         return video -> {
-            LocalDate yesterday = LocalDate.now().minusDays(1);
+            LocalDate today = LocalDate.now();
 
-            // 어제 날짜에 대한 통계 데이터가 이미 존재하는지 확인
-            if (!videoStatisticsRepository.existsByVideoAndDate(video, yesterday)) {
-                // 어제 날짜에 해당하는 PlayHistory 데이터를 필터링
-                Long totalPlayTime = video.getPlayHistories().stream()
-                        .filter(playHistory -> playHistory.getViewDate().toLocalDate().equals(yesterday))
-                        .mapToLong(PlayHistory::getPlayTime)
-                        .sum();
+            // 누적 조회수와 광고 조회수를 Video 엔티티에서 직접 가져옴
+            long totalViewCount = video.getViewCount();
+            long totalAdViewCount = video.getAdViewCount();
 
-                Long viewCount = video.getPlayHistories().stream()
-                        .filter(playHistory -> playHistory.getViewDate().toLocalDate().equals(yesterday))
-                        .count();
+            // 오늘의 조회수를 위한 전날 기준의 누적 조회수를 계산
+            long dailyViewCount = video.getVideoStatistics().stream()
+                    .filter(stat -> stat.getDate().equals(today.minusDays(1)))
+                    .mapToLong(VideoStatistics::getViewCount)
+                    .sum();
 
-                Long adViewCount = video.getAdHistories().stream()
-                        .filter(adHistory -> adHistory.getViewDate().equals(yesterday))
-                        .count();
+            long dailyAdViewCount = video.getVideoStatistics().stream()
+                    .filter(stat -> stat.getDate().equals(today.minusDays(1)))
+                    .mapToLong(VideoStatistics::getAdViewCount)
+                    .sum();
 
-                return new VideoStatistics(video, yesterday, viewCount, totalPlayTime, adViewCount);
-            } else {
-                System.out.println("중복된 통계 데이터가 이미 존재합니다: video_id=" + video.getVideoId() + ", date=" + yesterday);
-                return null;
-            }
+            // 전체 조회수에 따른 정산 금액 계산
+            BigDecimal viewRevenue = calculateRevenue(totalViewCount, dailyViewCount, RevenueType.VIDEO);
+            BigDecimal adRevenue = calculateRevenue(totalAdViewCount, dailyAdViewCount, RevenueType.AD);
+            BigDecimal totalRevenue = viewRevenue.add(adRevenue);
+
+            return new VideoRevenue(video, today, viewRevenue, adRevenue, totalRevenue);
         };
     }
 
+    private BigDecimal calculateRevenue(long totalViews, long dailyViews, RevenueType revenueType) {
+        BigDecimal revenue = BigDecimal.ZERO;
+        long remainingViews = dailyViews;
+
+        // 구간별로 RevenueRate를 가져와서 계산
+        List<RevenueRate> rates = revenueRateRepository.findAllByTypeOrderByMinViewsAsc(revenueType); // 구간을 정렬하여 가져옴
+        long cumulativeViews = totalViews - dailyViews; // 오늘 조회수 이전의 누적 조회수
+
+        for (RevenueRate rate : rates) {
+            // 해당 구간의 시작 조회수와 끝 조회수를 기준으로 현재 구간의 적용 가능한 조회수를 계산
+            long minViews = rate.getMinViews() != null ? rate.getMinViews() : 0;
+            long maxViews = rate.getMaxViews() != null ? rate.getMaxViews() : Long.MAX_VALUE;
+
+            // 누적 조회수와 오늘 조회수를 통해 해당 구간에서 적용할 조회수 계산
+            long viewsInThisRange = Math.max(0, Math.min(remainingViews, maxViews - Math.max(cumulativeViews, minViews)));
+
+            // 단가 적용 및 정산 금액 계산
+            BigDecimal calculatedAmount = BigDecimal.valueOf(rate.getRate()).multiply(BigDecimal.valueOf(viewsInThisRange));
+            revenue = revenue.add(calculatedAmount);
+
+            System.out.println("구간: " + minViews + " ~ " + (maxViews != Long.MAX_VALUE ? maxViews : "무제한") +
+                    ", 단가: " + rate.getRate() + ", 적용된 조회수: " + viewsInThisRange + ", 계산된 금액: " + calculatedAmount);
+
+            // 남은 조회수 및 누적 조회수 업데이트
+            remainingViews -= viewsInThisRange;
+            cumulativeViews += viewsInThisRange;
+
+            if (remainingViews <= 0) break;
+        }
+
+        System.out.println("총 정산 금액: " + revenue.setScale(0, RoundingMode.DOWN));
+        System.out.println("=== 정산 금액 계산 완료 ===\n");
+
+        return revenue.setScale(0, RoundingMode.DOWN);
+    }
+
+
+
     @Bean
-    public ItemWriter<VideoStatistics> dayVideoStatisticsWriter() {
-        return items -> {
-            for (VideoStatistics statistics : items) {
-                if (statistics != null) {
-                    videoStatisticsRepository.save(statistics);
-                }
+    public ItemWriter<VideoRevenue> revenueWriter() {
+        return revenues -> {
+            for (VideoRevenue revenue : revenues) {
+                videoRevenueRepository.save(revenue);
             }
         };
     }

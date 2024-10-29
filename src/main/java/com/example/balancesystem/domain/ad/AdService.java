@@ -38,6 +38,8 @@ public class AdService {
                 // 기존에 해당 광고를 시청했는지 확인
                 if (!adHistoryService.hasUserViewedAd(user, ad, video)) {
                     adHistoryService.saveAdHistory(user, ad, video, viewDate);
+
+                    video.increaseAdViewCount();
                     System.out.println("광고 시청 기록 저장 완료: 사용자 - " + user.getUsername() + ", 광고 ID - " + ad.getAdId() + ", 영상 ID - " + video.getVideoId());
                 } else {
                     System.out.println("중복된 광고 시청 기록이므로 저장 생략: 광고 ID - " + ad.getAdId() + ", 영상 ID - " + video.getVideoId());
