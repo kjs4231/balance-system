@@ -2,6 +2,7 @@ package com.example.contentservice.ad;
 
 import com.example.contentservice.adhistory.AdHistoryService;
 import com.example.contentservice.video.Video;
+import com.example.contentservice.videohistory.PlayHistoryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -15,9 +16,15 @@ public class AdService {
 
     private final AdHistoryService adHistoryService;
     private final AdRepository adRepository;
+    private final PlayHistoryService playHistoryService;
 
     @Transactional
     public void handleAdViews(Video video, Long userId, int currentPlayedAt) {
+        if (playHistoryService.isAbusiveAccess(userId, video)) {
+            System.out.println("어뷰징으로 인해 광고 시청 횟수가 증가하지 않습니다.");
+            return;
+        }
+
         List<Ad> ads = adRepository.findAll();
 
         if (ads.isEmpty()) {

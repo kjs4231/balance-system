@@ -2,20 +2,28 @@ package com.example.contentservice.videohistory;
 
 import com.example.contentservice.video.Video;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 
 @Service
 @RequiredArgsConstructor
 public class PlayHistoryService {
 
     private final PlayHistoryRepository playHistoryRepository;
+    private final StringRedisTemplate redisTemplate;
 
     @Transactional
     public PlayHistory handlePlay(Long userId, Video video) {
+
+        if (isAbusiveAccess(userId, video)) {
+            throw new IllegalStateException("어뷰징으로 인해 조회수가 증가하지 않습니다.");
+        }
+
         Optional<PlayHistory> optionalPlayHistory = playHistoryRepository.findTopByUserIdAndVideoAndIsCompletedFalseOrderByViewDateDesc(userId, video);
 
         int startFrom = 0;
@@ -35,6 +43,25 @@ public class PlayHistoryService {
         video.increaseViewCount();
 
         return newPlayHistory;
+    }
+
+    public boolean isAbusiveAccess(Long userId, Video video) {
+        // 동영상 게시자가 시청하는 경우
+        if (userId.equals(video.getOwnerId())) {
+            System.out.println("게시자는 자신의 동영상을 시청해도 조회수와 광고 시청 횟수가 증가하지 않습니다.");
+            return true;
+        }
+
+        // 30초 내 중복 시청 방지
+//        String redisKey = "viewing:" + userId + ":" + video.getVideoId();
+//        if (redisTemplate.hasKey(redisKey)) {
+//            System.out.println("30초 내 중복된 요청입니다. 조회수는 카운트되지 않습니다.");
+//            return true;
+//        }
+//
+//        // Redis에 TTL 설정을 통해 중복 요청 방지
+//        redisTemplate.opsForValue().set(redisKey, "viewing", 30, TimeUnit.SECONDS);
+        return false;
     }
 
     @Transactional
