@@ -22,7 +22,6 @@ public class VideoStatisticsController {
     private final Job dayStatisticsJob;
     private final VideoStatisticsService videoStatisticsService;
 
-
     @GetMapping("/top5/view-count")
     public Map<String, List<String>> getTop5ByViewCount(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
@@ -36,15 +35,16 @@ public class VideoStatisticsController {
     }
 
     @GetMapping("/run-day-batch-job")
-    public String runDayBatchJob(@RequestParam(value = "time", required = false) Long time) {
-        return runBatchJob(dayStatisticsJob, "Day batch job", time);
+    public String runDayBatchJob(@RequestParam(value = "date", required = false)
+                                 @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        return runBatchJob(dayStatisticsJob, "Day batch job", date);
     }
 
     // 배치 잡 실행 로직
-    private String runBatchJob(Job job, String jobName, Long time) {
+    private String runBatchJob(Job job, String jobName, LocalDate date) {
         try {
             JobParameters jobParameters = new JobParametersBuilder()
-                    .addLong("time", time != null ? time : System.currentTimeMillis())
+                    .addString("date", date != null ? date.toString() : LocalDate.now().toString())
                     .toJobParameters();
             jobLauncher.run(job, jobParameters);
             return jobName + " has been successfully invoked.";

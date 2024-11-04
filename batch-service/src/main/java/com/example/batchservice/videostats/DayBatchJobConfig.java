@@ -10,10 +10,7 @@ import com.example.contentservice.videohistory.PlayHistoryRepository;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.batch.core.Job;
-import org.springframework.batch.core.JobExecution;
-import org.springframework.batch.core.JobExecutionListener;
-import org.springframework.batch.core.Step;
+import org.springframework.batch.core.*;
 import org.springframework.batch.core.configuration.annotation.EnableBatchProcessing;
 import org.springframework.batch.core.job.builder.JobBuilder;
 import org.springframework.batch.core.partition.support.Partitioner;
@@ -26,22 +23,26 @@ import org.springframework.batch.item.ItemWriter;
 import org.springframework.batch.item.data.RepositoryItemReader;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.task.SimpleAsyncTaskExecutor;
-import org.springframework.data.domain.Sort;
+import org.springframework.core.task.TaskExecutor;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.data.domain.Sort;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 @Configuration
-@EnableBatchProcessing(modular = true)
+@EnableBatchProcessing
 @RequiredArgsConstructor
 @EnableScheduling
 public class DayBatchJobConfig {
@@ -55,8 +56,6 @@ public class DayBatchJobConfig {
     private final PlatformTransactionManager transactionManager;
     private final VideoStatisticsRepository videoStatisticsRepository;
     private final PlayHistoryRepository playHistoryRepository;
-
-    private final ConcurrentHashMap<Long, LocalDate> processedRevenue = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<RevenueType, List<RevenueRate>> revenueRateCache = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<Long, Long> cachedPlayTime = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<Long, Long> cachedViewCount = new ConcurrentHashMap<>();
@@ -64,6 +63,13 @@ public class DayBatchJobConfig {
     @Bean
     public Job dayStatisticsJob() {
         return new JobBuilder("dayStatisticsJob", jobRepository)
+                .incrementer(parameters -> {
+                    // 날짜를 기준으로 멱등성을 보장하는 JobParameter 설정
+                    String date = LocalDate.now().toString();
+                    return new JobParametersBuilder(parameters)
+                            .addString("date", date)
+                            .toJobParameters();
+                })
                 .start(partitionedDayStatisticsStep())
                 .next(partitionedDayRevenueStep())
                 .listener(new JobExecutionListener() {
@@ -108,6 +114,24 @@ public class DayBatchJobConfig {
                 .reader(videoIdReader())
                 .processor(statisticsProcessor())
                 .writer(statisticsWriter())
+                .faultTolerant()
+                .skip(Exception.class)
+                .skipLimit(3) // Skip limit adjusted for better fault tolerance control
+                .retry(Exception.class)
+                .retryLimit(2) // Retry limit adjusted to avoid excessive retries
+                .listener(new StepExecutionListener() {
+                    @Override
+                    public void beforeStep(StepExecution stepExecution) {
+                        JobParameters jobParameters = stepExecution.getJobParameters();
+                        String date = jobParameters.getString("date");
+                        logger.info("Processing statistics for date: {}", date);
+                    }
+
+                    @Override
+                    public ExitStatus afterStep(StepExecution stepExecution) {
+                        return ExitStatus.COMPLETED;
+                    }
+                })
                 .build();
     }
 
@@ -118,18 +142,35 @@ public class DayBatchJobConfig {
                 .reader(videoIdReader())
                 .processor(revenueProcessor())
                 .writer(revenueWriter())
+                .faultTolerant()
+                .skip(Exception.class)
+                .skipLimit(3) // Skip limit adjusted for better control over fault tolerance
+                .retry(Exception.class)
+                .retryLimit(2) // Retry limit adjusted to avoid unnecessary retries
                 .build();
     }
 
     @Bean
     public Partitioner partitioner() {
         return gridSize -> {
-            ConcurrentHashMap<String, ExecutionContext> result = new ConcurrentHashMap<>();
-            IntStream.range(0, gridSize).forEach(i -> {
-                ExecutionContext context = new ExecutionContext();
-                context.put("partition", i);
-                result.put("partition" + i, context);
-            });
+            List<Long> videoIds = videoRepository.findAllVideoIds();
+            long targetSize = (long) Math.ceil((double) videoIds.size() / gridSize);
+
+            Map<String, ExecutionContext> result = IntStream.range(0, gridSize)
+                    .filter(i -> i * targetSize < videoIds.size()) // Ensure valid range
+                    .mapToObj(i -> {
+                        ExecutionContext context = new ExecutionContext();
+                        long start = i * targetSize;
+                        long end = Math.min((i + 1) * targetSize, videoIds.size());
+                        if (start < end) { // Ensure subList is valid
+                            List<Long> partitionedVideoIds = new ArrayList<>(videoIds.subList((int) start, (int) end));
+                            context.put("videoIds", partitionedVideoIds);
+                        }
+                        return Map.entry("partition" + i, context);
+                    })
+                    .filter(entry -> entry.getValue().containsKey("videoIds")) // Filter out empty partitions
+                    .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+
             return result;
         };
     }
@@ -138,7 +179,7 @@ public class DayBatchJobConfig {
     public TaskExecutorPartitionHandler statisticsPartitionHandler() {
         TaskExecutorPartitionHandler handler = new TaskExecutorPartitionHandler();
         handler.setStep(dayStatisticsStep());
-        handler.setTaskExecutor(new SimpleAsyncTaskExecutor());
+        handler.setTaskExecutor(threadPoolTaskExecutor());
         handler.setGridSize(4); // Assuming 4 partitions
         return handler;
     }
@@ -147,9 +188,20 @@ public class DayBatchJobConfig {
     public TaskExecutorPartitionHandler revenuePartitionHandler() {
         TaskExecutorPartitionHandler handler = new TaskExecutorPartitionHandler();
         handler.setStep(dayRevenueStep());
-        handler.setTaskExecutor(new SimpleAsyncTaskExecutor());
+        handler.setTaskExecutor(threadPoolTaskExecutor());
         handler.setGridSize(4); // Assuming 4 partitions
         return handler;
+    }
+
+    @Bean
+    public TaskExecutor threadPoolTaskExecutor() {
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(10);
+        executor.setMaxPoolSize(20);
+        executor.setQueueCapacity(50);
+        executor.setThreadNamePrefix("BatchExecutor-"); // Added for better debugging and monitoring
+        executor.initialize();
+        return executor;
     }
 
     @Bean
@@ -172,7 +224,7 @@ public class DayBatchJobConfig {
                 long adViewCount = playHistoryRepository.countAdViewsByVideoIdAndDate(videoId, yesterday);
                 return new VideoStatistics(videoId, yesterday, viewCount, totalPlayTime, adViewCount);
             } else {
-                logger.info("Duplicate statistics data exists: video_id={}, date={}", videoId, yesterday);
+                logger.info("Duplicate statistics data exists: video_id={}, date=", videoId, yesterday);
                 return null;
             }
         };
@@ -196,6 +248,7 @@ public class DayBatchJobConfig {
             LocalDate yesterday = LocalDate.now().minusDays(1);
             logger.info("Processing revenue for videoId: {}", videoId);
 
+            // 데이터베이스에서 중복 여부를 확인하여 정산 데이터를 생성
             if (!videoRevenueRepository.existsByVideoIdAndDate(videoId, yesterday)) {
                 long totalViewCount = videoRepository.getViewCountByVideoId(videoId);
                 long totalAdViewCount = videoRepository.getAdViewCountByVideoId(videoId);
