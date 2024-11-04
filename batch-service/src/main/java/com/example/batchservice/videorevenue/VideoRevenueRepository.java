@@ -10,5 +10,5 @@ public interface VideoRevenueRepository extends JpaRepository<VideoRevenue, Long
     List<VideoRevenue> findByDateBetween(LocalDate startDate, LocalDate endDate);
 
 
-
+    boolean existsByVideoIdAndDate(Long videoId, LocalDate yesterday);
 }

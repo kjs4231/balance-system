@@ -139,7 +139,7 @@ public class DayBatchJobConfig {
         TaskExecutorPartitionHandler handler = new TaskExecutorPartitionHandler();
         handler.setStep(dayStatisticsStep());
         handler.setTaskExecutor(new SimpleAsyncTaskExecutor());
-        handler.setGridSize(4);
+        handler.setGridSize(4); // Assuming 4 partitions
         return handler;
     }
 
@@ -148,7 +148,7 @@ public class DayBatchJobConfig {
         TaskExecutorPartitionHandler handler = new TaskExecutorPartitionHandler();
         handler.setStep(dayRevenueStep());
         handler.setTaskExecutor(new SimpleAsyncTaskExecutor());
-        handler.setGridSize(4);
+        handler.setGridSize(4); // Assuming 4 partitions
         return handler;
     }
 
@@ -195,18 +195,25 @@ public class DayBatchJobConfig {
         return videoId -> {
             LocalDate yesterday = LocalDate.now().minusDays(1);
             logger.info("Processing revenue for videoId: {}", videoId);
-            long totalViewCount = videoRepository.getViewCountByVideoId(videoId);
-            long totalAdViewCount = videoRepository.getAdViewCountByVideoId(videoId);
-            long dailyViewCount = videoStatisticsRepository.getDailyViewCountByVideoId(videoId, yesterday);
-            long dailyAdViewCount = videoStatisticsRepository.getDailyAdViewCountByVideoId(videoId, yesterday);
 
-            BigDecimal viewRevenue = calculateRevenue(totalViewCount, dailyViewCount, RevenueType.VIDEO);
-            BigDecimal adRevenue = calculateRevenue(totalAdViewCount, dailyAdViewCount, RevenueType.AD);
-            BigDecimal totalRevenue = viewRevenue.add(adRevenue);
+            if (!videoRevenueRepository.existsByVideoIdAndDate(videoId, yesterday)) {
+                long totalViewCount = videoRepository.getViewCountByVideoId(videoId);
+                long totalAdViewCount = videoRepository.getAdViewCountByVideoId(videoId);
+                long dailyViewCount = videoStatisticsRepository.getDailyViewCountByVideoId(videoId, yesterday);
+                long dailyAdViewCount = videoStatisticsRepository.getDailyAdViewCountByVideoId(videoId, yesterday);
 
-            return new VideoRevenue(videoId, yesterday, viewRevenue, adRevenue, totalRevenue);
+                BigDecimal viewRevenue = calculateRevenue(totalViewCount, dailyViewCount, RevenueType.VIDEO);
+                BigDecimal adRevenue = calculateRevenue(totalAdViewCount, dailyAdViewCount, RevenueType.AD);
+                BigDecimal totalRevenue = viewRevenue.add(adRevenue);
+
+                return new VideoRevenue(videoId, yesterday, viewRevenue, adRevenue, totalRevenue);
+            } else {
+                logger.info("Duplicate revenue data exists: video_id={}, date={}", videoId, yesterday);
+                return null;
+            }
         };
     }
+
 
     @Bean
     public ItemWriter<VideoRevenue> revenueWriter() {
