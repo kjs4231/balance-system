@@ -17,5 +17,8 @@ public interface VideoRepository extends JpaRepository<Video, Long> {
     Long getAdViewCountByVideoId(@Param("videoId") Long videoId);
 
     @Query("SELECT v.videoId FROM Video v")
+    List<Long> findAllVideoIds();
+
+    @Query("SELECT v.videoId FROM Video v")
     Page<Long> findAllVideoIds(Pageable pageable);
 }

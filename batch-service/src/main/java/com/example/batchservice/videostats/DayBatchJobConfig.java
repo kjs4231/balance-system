@@ -10,16 +10,23 @@ import com.example.contentservice.videohistory.PlayHistoryRepository;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.batch.core.*;
+import org.springframework.batch.core.Job;
+import org.springframework.batch.core.JobExecution;
+import org.springframework.batch.core.JobExecutionListener;
+import org.springframework.batch.core.Step;
 import org.springframework.batch.core.configuration.annotation.EnableBatchProcessing;
 import org.springframework.batch.core.job.builder.JobBuilder;
+import org.springframework.batch.core.partition.support.Partitioner;
+import org.springframework.batch.core.partition.support.TaskExecutorPartitionHandler;
 import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.batch.core.step.builder.StepBuilder;
+import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.batch.item.ItemWriter;
 import org.springframework.batch.item.data.RepositoryItemReader;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.task.SimpleAsyncTaskExecutor;
 import org.springframework.data.domain.Sort;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -31,9 +38,10 @@ import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.IntStream;
 
 @Configuration
-@EnableBatchProcessing
+@EnableBatchProcessing(modular = true)
 @RequiredArgsConstructor
 @EnableScheduling
 public class DayBatchJobConfig {
@@ -56,8 +64,8 @@ public class DayBatchJobConfig {
     @Bean
     public Job dayStatisticsJob() {
         return new JobBuilder("dayStatisticsJob", jobRepository)
-                .start(dayStatisticsStep())
-                .next(dayRevenueStep())
+                .start(partitionedDayStatisticsStep())
+                .next(partitionedDayRevenueStep())
                 .listener(new JobExecutionListener() {
                     private long jobStartTime;
 
@@ -78,29 +86,28 @@ public class DayBatchJobConfig {
     }
 
     @Bean
+    public Step partitionedDayStatisticsStep() {
+        return new StepBuilder("partitionedDayStatisticsStep", jobRepository)
+                .partitioner(dayStatisticsStep().getName(), partitioner())
+                .partitionHandler(statisticsPartitionHandler())
+                .build();
+    }
+
+    @Bean
+    public Step partitionedDayRevenueStep() {
+        return new StepBuilder("partitionedDayRevenueStep", jobRepository)
+                .partitioner(dayRevenueStep().getName(), partitioner())
+                .partitionHandler(revenuePartitionHandler())
+                .build();
+    }
+
+    @Bean
     public Step dayStatisticsStep() {
         return new StepBuilder("dayStatisticsStep", jobRepository)
                 .<Long, VideoStatistics>chunk(10, transactionManager)
                 .reader(videoIdReader())
                 .processor(statisticsProcessor())
                 .writer(statisticsWriter())
-                .listener(new StepExecutionListener() {
-                    private long stepStartTime;
-
-                    @Override
-                    public void beforeStep(StepExecution stepExecution) {
-                        stepStartTime = System.currentTimeMillis();
-                        logger.info("Step dayStatisticsStep started at: {}", LocalDateTime.now());
-                    }
-
-                    @Override
-                    public ExitStatus afterStep(StepExecution stepExecution) {
-                        long stepEndTime = System.currentTimeMillis();
-                        logger.info("Step dayStatisticsStep completed at: {}", LocalDateTime.now());
-                        logger.info("Time taken for dayStatisticsStep: {} ms", (stepEndTime - stepStartTime));
-                        return ExitStatus.COMPLETED;
-                    }
-                })
                 .build();
     }
 
@@ -111,24 +118,38 @@ public class DayBatchJobConfig {
                 .reader(videoIdReader())
                 .processor(revenueProcessor())
                 .writer(revenueWriter())
-                .listener(new StepExecutionListener() {
-                    private long stepStartTime;
-
-                    @Override
-                    public void beforeStep(StepExecution stepExecution) {
-                        stepStartTime = System.currentTimeMillis();
-                        logger.info("Step dayRevenueStep started at: {}", LocalDateTime.now());
-                    }
-
-                    @Override
-                    public ExitStatus afterStep(StepExecution stepExecution) {
-                        long stepEndTime = System.currentTimeMillis();
-                        logger.info("Step dayRevenueStep completed at: {}", LocalDateTime.now());
-                        logger.info("Time taken for dayRevenueStep: {} ms", (stepEndTime - stepStartTime));
-                        return ExitStatus.COMPLETED;
-                    }
-                })
                 .build();
+    }
+
+    @Bean
+    public Partitioner partitioner() {
+        return gridSize -> {
+            ConcurrentHashMap<String, ExecutionContext> result = new ConcurrentHashMap<>();
+            IntStream.range(0, gridSize).forEach(i -> {
+                ExecutionContext context = new ExecutionContext();
+                context.put("partition", i);
+                result.put("partition" + i, context);
+            });
+            return result;
+        };
+    }
+
+    @Bean
+    public TaskExecutorPartitionHandler statisticsPartitionHandler() {
+        TaskExecutorPartitionHandler handler = new TaskExecutorPartitionHandler();
+        handler.setStep(dayStatisticsStep());
+        handler.setTaskExecutor(new SimpleAsyncTaskExecutor());
+        handler.setGridSize(4);
+        return handler;
+    }
+
+    @Bean
+    public TaskExecutorPartitionHandler revenuePartitionHandler() {
+        TaskExecutorPartitionHandler handler = new TaskExecutorPartitionHandler();
+        handler.setStep(dayRevenueStep());
+        handler.setTaskExecutor(new SimpleAsyncTaskExecutor());
+        handler.setGridSize(4);
+        return handler;
     }
 
     @Bean
@@ -144,7 +165,7 @@ public class DayBatchJobConfig {
     public ItemProcessor<Long, VideoStatistics> statisticsProcessor() {
         return videoId -> {
             LocalDate yesterday = LocalDate.now().minusDays(1);
-            logger.info("Processing statistics for videoId: {}", videoId); // Log for each videoId
+            logger.info("Processing statistics for videoId: {}", videoId);
             if (!videoStatisticsRepository.existsByVideoIdAndDate(videoId, yesterday)) {
                 long totalPlayTime = getCachedPlayTime(videoId, yesterday);
                 long viewCount = getCachedViewCount(videoId, yesterday);
@@ -153,6 +174,48 @@ public class DayBatchJobConfig {
             } else {
                 logger.info("Duplicate statistics data exists: video_id={}, date={}", videoId, yesterday);
                 return null;
+            }
+        };
+    }
+
+    @Bean
+    public ItemWriter<VideoStatistics> statisticsWriter() {
+        return items -> {
+            for (VideoStatistics statistics : items) {
+                if (statistics != null) {
+                    logger.info("Writing statistics for videoId: {}", statistics.getVideoId());
+                    videoStatisticsRepository.save(statistics);
+                }
+            }
+        };
+    }
+
+    @Bean
+    public ItemProcessor<Long, VideoRevenue> revenueProcessor() {
+        return videoId -> {
+            LocalDate yesterday = LocalDate.now().minusDays(1);
+            logger.info("Processing revenue for videoId: {}", videoId);
+            long totalViewCount = videoRepository.getViewCountByVideoId(videoId);
+            long totalAdViewCount = videoRepository.getAdViewCountByVideoId(videoId);
+            long dailyViewCount = videoStatisticsRepository.getDailyViewCountByVideoId(videoId, yesterday);
+            long dailyAdViewCount = videoStatisticsRepository.getDailyAdViewCountByVideoId(videoId, yesterday);
+
+            BigDecimal viewRevenue = calculateRevenue(totalViewCount, dailyViewCount, RevenueType.VIDEO);
+            BigDecimal adRevenue = calculateRevenue(totalAdViewCount, dailyAdViewCount, RevenueType.AD);
+            BigDecimal totalRevenue = viewRevenue.add(adRevenue);
+
+            return new VideoRevenue(videoId, yesterday, viewRevenue, adRevenue, totalRevenue);
+        };
+    }
+
+    @Bean
+    public ItemWriter<VideoRevenue> revenueWriter() {
+        return items -> {
+            for (VideoRevenue revenue : items) {
+                if (revenue != null) {
+                    logger.info("Writing revenue for videoId: {}", revenue.getVideoId());
+                    videoRevenueRepository.save(revenue);
+                }
             }
         };
     }
@@ -167,41 +230,6 @@ public class DayBatchJobConfig {
         return cachedViewCount.computeIfAbsent(videoId, id ->
                 playHistoryRepository.countByVideoIdAndDate(id, date)
         );
-    }
-
-    @Bean
-    public ItemWriter<VideoStatistics> statisticsWriter() {
-        return items -> {
-            for (VideoStatistics statistics : items) {
-                if (statistics != null) {
-                    logger.info("Writing statistics for videoId: {}", statistics.getVideoId()); // Log for writing each item
-                    videoStatisticsRepository.save(statistics);
-                }
-            }
-        };
-    }
-
-    @Bean
-    public ItemProcessor<Long, VideoRevenue> revenueProcessor() {
-        return videoId -> {
-            LocalDate yesterday = LocalDate.now().minusDays(1);
-            logger.info("Processing revenue for videoId: {}", videoId); // Log for each videoId
-            if (processedRevenue.putIfAbsent(videoId, yesterday) == null) {
-                long totalViewCount = videoRepository.getViewCountByVideoId(videoId);
-                long totalAdViewCount = videoRepository.getAdViewCountByVideoId(videoId);
-                long dailyViewCount = videoStatisticsRepository.getDailyViewCountByVideoId(videoId, yesterday);
-                long dailyAdViewCount = videoStatisticsRepository.getDailyAdViewCountByVideoId(videoId, yesterday);
-
-                BigDecimal viewRevenue = calculateRevenue(totalViewCount, dailyViewCount, RevenueType.VIDEO);
-                BigDecimal adRevenue = calculateRevenue(totalAdViewCount, dailyAdViewCount, RevenueType.AD);
-                BigDecimal totalRevenue = viewRevenue.add(adRevenue);
-
-                return new VideoRevenue(videoId, yesterday, viewRevenue, adRevenue, totalRevenue);
-            } else {
-                logger.info("Duplicate revenue data exists: video_id={}, date={}", videoId, yesterday);
-                return null;
-            }
-        };
     }
 
     private BigDecimal calculateRevenue(long totalViews, long dailyViews, RevenueType revenueType) {
@@ -228,17 +256,5 @@ public class DayBatchJobConfig {
         return revenueRateCache.computeIfAbsent(revenueType, type ->
                 revenueRateRepository.findAllByTypeOrderByMinViewsAsc(type)
         );
-    }
-
-    @Bean
-    public ItemWriter<VideoRevenue> revenueWriter() {
-        return items -> {
-            for (VideoRevenue revenue : items) {
-                if (revenue != null) {
-                    logger.info("Writing revenue for videoId: {}", revenue.getVideoId()); // Log for writing each item
-                    videoRevenueRepository.save(revenue);
-                }
-            }
-        };
     }
 }
