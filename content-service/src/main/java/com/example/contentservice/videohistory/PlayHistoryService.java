@@ -26,8 +26,8 @@ public class PlayHistoryService {
         RLock lock = redissonClient.getLock(lockKey);
 
         try {
-            // 락 획득 시도, 최대 5초 대기 후 실패
-            boolean isLockAcquired = lock.tryLock(5, 30, TimeUnit.SECONDS);
+            // 락 획득 시도, 최대 1초 대기 후 실패
+            boolean isLockAcquired = lock.tryLock(1, 5, TimeUnit.SECONDS);
             if (!isLockAcquired) {
                 System.out.println("동시성 제어로 인해 조회수가 증가하지 않습니다.");
                 throw new IllegalStateException("동시성 제어로 인해 조회수가 증가하지 않습니다.");
