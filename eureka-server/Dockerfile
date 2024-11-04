@@ -2,9 +2,10 @@
 FROM openjdk:17-jdk-slim
 
 # 빌드된 JAR 파일을 컨테이너 내로 복사
-COPY build/libs/*.jar /app/myapp.jar
+COPY build/libs/*.jar /app/eureka-server.jar
 
 # JAR 파일을 실행하는 명령어
-ENTRYPOINT ["java", "-jar", "/app/myapp.jar"]
+ENTRYPOINT ["java", "-jar", "/app/eureka-server.jar"]
 
-EXPOSE 8080
+# 포트 노출
+EXPOSE 8761

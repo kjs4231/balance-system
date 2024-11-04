@@ -14,15 +14,9 @@ public class AdHistoryService {
 
     private final AdHistoryRepository adHistoryRepository;
 
-    @Transactional(readOnly = true)
-    public boolean hasUserViewedAd(Long userId, Ad ad, Video video) {
-        LocalDate today = LocalDate.now();
-        return adHistoryRepository.existsByUserIdAndAdAndVideoAndViewDate(userId, ad, video, today);
-    }
-
     @Transactional
-    public void saveAdHistory(Long userId, Ad ad, Video video, LocalDate viewDate) {
-        if (!hasUserViewedAd(userId, ad, video)) {
+    public void saveAdHistoryIfNotExists(Long userId, Ad ad, Video video, LocalDate viewDate) {
+        if (!adHistoryRepository.existsByUserIdAndAdAndVideoAndViewDate(userId, ad, video, viewDate)) {
             AdHistory adHistory = new AdHistory(userId, ad, video, viewDate);
             adHistoryRepository.save(adHistory);
             System.out.println("광고 시청 기록이 저장되었습니다: 사용자 ID - " + userId + ", 광고 ID - " + ad.getAdId());

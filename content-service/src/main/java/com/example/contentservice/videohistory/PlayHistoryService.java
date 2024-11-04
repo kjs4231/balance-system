@@ -19,8 +19,11 @@ public class PlayHistoryService {
 
     @Transactional
     public PlayHistory handlePlay(Long userId, Video video) {
+        String redisKey = "viewing:" + userId + ":" + video.getVideoId();
+        Boolean isNewAccess = redisTemplate.opsForValue().setIfAbsent(redisKey, "viewing", 30, TimeUnit.SECONDS);
 
-        if (isAbusiveAccess(userId, video)) {
+        if (Boolean.FALSE.equals(isNewAccess)) {
+            System.out.println("어뷰징으로 인해 조회수가 증가하지 않습니다.");
             throw new IllegalStateException("어뷰징으로 인해 조회수가 증가하지 않습니다.");
         }
 
@@ -30,7 +33,6 @@ public class PlayHistoryService {
         if (optionalPlayHistory.isPresent()) {
             PlayHistory previousPlayHistory = optionalPlayHistory.get();
             startFrom = previousPlayHistory.getLastPlayedAt();
-
             previousPlayHistory.setCompleted(true);
             playHistoryRepository.save(previousPlayHistory);
         }
@@ -40,10 +42,13 @@ public class PlayHistoryService {
         newPlayHistory.setLastPlayedAt(startFrom);
         playHistoryRepository.save(newPlayHistory);
 
-        video.increaseViewCount();
+        // 조회수를 Redis에 저장 (데이터베이스에는 주기적으로 동기화)
+        String viewCountKey = "video:viewCount:" + video.getVideoId();
+        redisTemplate.opsForValue().increment(viewCountKey);
 
         return newPlayHistory;
     }
+
 
     public boolean isAbusiveAccess(Long userId, Video video) {
         // 동영상 게시자가 시청하는 경우
@@ -53,14 +58,14 @@ public class PlayHistoryService {
         }
 
         // 30초 내 중복 시청 방지
-//        String redisKey = "viewing:" + userId + ":" + video.getVideoId();
-//        if (redisTemplate.hasKey(redisKey)) {
-//            System.out.println("30초 내 중복된 요청입니다. 조회수는 카운트되지 않습니다.");
-//            return true;
-//        }
-//
-//        // Redis에 TTL 설정을 통해 중복 요청 방지
-//        redisTemplate.opsForValue().set(redisKey, "viewing", 30, TimeUnit.SECONDS);
+        String redisKey = "viewing:" + userId + ":" + video.getVideoId();
+        if (redisTemplate.hasKey(redisKey)) {
+            System.out.println("30초 내 중복된 요청입니다. 조회수는 카운트되지 않습니다.");
+            return true;
+        }
+
+        // Redis에 TTL 설정을 통해 중복 요청 방지
+        redisTemplate.opsForValue().set(redisKey, "viewing", 30, TimeUnit.SECONDS);
         return false;
     }
 

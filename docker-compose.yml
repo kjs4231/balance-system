@@ -1,36 +1,13 @@
 version: '3.8'
 
 services:
-  app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    ports:
-      - "8080:8080"
-    environment:
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/final
-      SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD}
-      SPRING_DATASOURCE_DRIVER_CLASS_NAME: com.mysql.cj.jdbc.Driver
-      SPRING_JPA_HIBERNATE_DDL_AUTO: update
-      SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT: org.hibernate.dialect.MySQLDialect
-      SPRING_REDIS_HOST: redis-stack  # Redis 서비스 이름으로 수정
-      SPRING_REDIS_PORT: 6379  # Redis 기본 포트
-      SPRING_REDIS_PASSWORD: 1234  # Redis 비밀번호 설정
-      SPRING_BATCH_JDBC_INITIALIZE_SCHEMA: always
-    depends_on:
-      - mysql
-      - redis-stack  # Redis 의존성 추가
-    networks:
-      - app-network
-
-
+  # MySQL 서비스
   mysql:
     image: 'mysql:latest'
     container_name: mysql
     environment:
       - 'MYSQL_DATABASE=final'
-      - 'MYSQL_ROOT_PASSWORD=${MYSQL_PASSWORD}'
+      - 'MYSQL_ROOT_PASSWORD=1234'
     ports:
       - '3307:3306'
     volumes:
@@ -38,31 +15,8 @@ services:
     networks:
       - app-network
 
-  mysql_test:
-    image: 'mysql:latest'
-    container_name: mysql_test
-    environment:
-      - 'MYSQL_DATABASE=test_db'
-      - 'MYSQL_ROOT_PASSWORD=1234'
-    ports:
-      - '3308:3306'
-    volumes:
-      - mysql-test-data:/var/lib/mysql
-    networks:
-      - app-network
-
-  nginx:
-    image: nginx:latest
-    ports:
-      - "80:80"
-    volumes:
-      - ./nginx/conf.d/nginx.conf:/etc/nginx/conf.d/default.conf
-    depends_on:
-      - app
-    networks:
-      - app-network
-
-  redis-stack:
+  # Redis 서비스
+  redis-stack-compose:
     image: redis/redis-stack
     container_name: redis-stack-compose
     restart: always
@@ -70,13 +24,11 @@ services:
       - REDIS_ARGS=--requirepass 1234
     ports:
       - 6379:6379
-      - 8001:8001
     networks:
-      - app-network  # Redis가 동일한 네트워크에 연결되도록 추가
+      - app-network
 
 volumes:
   mysql-data:
-  mysql-test-data:
 
 networks:
   app-network:

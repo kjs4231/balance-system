@@ -21,7 +21,7 @@ public class Video {
     private int viewCount = 0;
     private int adViewCount = 0;
 
-    private Long ownerId; // User 대신 ownerId 필드 추가
+    private Long ownerId;
 
     @OneToMany(mappedBy = "video", cascade = CascadeType.ALL)
     private List<PlayHistory> playHistories = new ArrayList<>();
@@ -44,4 +44,13 @@ public class Video {
         this.duration = duration;
         this.ownerId = ownerId;
     }
+
+    public void increaseViewCountBy(int count) {
+        this.viewCount += count;
+    }
+
+    public void increaseAdViewCountBy(int count) {
+        this.adViewCount += count;
+    }
+
 }
