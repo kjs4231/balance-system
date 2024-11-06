@@ -229,7 +229,6 @@ public class DayBatchJobConfig {
             }
         };
     }
-
     @Bean
     public ItemWriter<VideoStatistics> statisticsWriter() {
         return items -> {
@@ -241,7 +240,6 @@ public class DayBatchJobConfig {
             }
         };
     }
-
     @Bean
     public ItemProcessor<Long, VideoRevenue> revenueProcessor() {
         return videoId -> {

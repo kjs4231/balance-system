@@ -1,90 +1,61 @@
 package com.example.contentservice.videohistory;
 
 import com.example.contentservice.video.Video;
+import com.example.contentservice.videohistory.PlayHistory;
+import com.example.contentservice.videohistory.PlayHistoryRepository;
 import lombok.RequiredArgsConstructor;
-import org.redisson.api.RLock;
-import org.redisson.api.RedissonClient;
-import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.script.RedisScript;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.Optional;
-import java.util.concurrent.TimeUnit;
 
 @Service
 @RequiredArgsConstructor
 public class PlayHistoryService {
 
     private final PlayHistoryRepository playHistoryRepository;
-    private final StringRedisTemplate redisTemplate;
-    private final RedissonClient redissonClient;
+    private final RedisTemplate<String, String> redisTemplate;
+    private final RedisScript<Long> luaScript;
 
     @Transactional
     public PlayHistory handlePlay(Long userId, Video video) {
-        String lockKey = "play-lock:" + userId + ":" + video.getVideoId();
-        RLock lock = redissonClient.getLock(lockKey);
-
-        try {
-            // 락 획득 시도, 최대 1초 대기 후 실패
-            boolean isLockAcquired = lock.tryLock(1, 5, TimeUnit.SECONDS);
-            if (!isLockAcquired) {
-                System.out.println("동시성 제어로 인해 조회수가 증가하지 않습니다.");
-                throw new IllegalStateException("동시성 제어로 인해 조회수가 증가하지 않습니다.");
-            }
-
-            // 어뷰징 여부 검사
-            if (isAbusiveAccess(userId, video)) {
-                throw new IllegalStateException("어뷰징으로 인해 조회수가 증가하지 않습니다.");
-            }
-
-            Optional<PlayHistory> optionalPlayHistory = playHistoryRepository.findTopByUserIdAndVideoAndIsCompletedFalseOrderByViewDateDesc(userId, video);
-
-            int startFrom = 0;
-            if (optionalPlayHistory.isPresent()) {
-                PlayHistory previousPlayHistory = optionalPlayHistory.get();
-                startFrom = previousPlayHistory.getLastPlayedAt();
-                previousPlayHistory.setCompleted(true);
-                playHistoryRepository.save(previousPlayHistory);
-            }
-
-            PlayHistory newPlayHistory = new PlayHistory(userId, video, LocalDateTime.now(), startFrom);
-            newPlayHistory.setPlayTime(0);
-            newPlayHistory.setLastPlayedAt(startFrom);
-            playHistoryRepository.save(newPlayHistory);
-
-            // 조회수를 Redis에 저장
-            String viewCountKey = "video:viewCount:" + video.getVideoId();
-            redisTemplate.opsForValue().increment(viewCountKey);
-
-            return newPlayHistory;
-
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new IllegalStateException("락 획득 중 인터럽트가 발생했습니다.", e);
-        } finally {
-            // 락 해제
-            lock.unlock();
-        }
-    }
-
-    public boolean isAbusiveAccess(Long userId, Video video) {
-
-        if (userId.equals(video.getOwnerId())) {
-            System.out.println("게시자는 자신의 동영상을 시청해도 조회수와 광고 시청 횟수가 증가하지 않습니다.");
-            return true;
+        // TTL 설정은 Lua 스크립트에서만 처리하도록 함
+        if (isAbusiveAccess(userId, video)) {
+            throw new IllegalStateException("어뷰징으로 인해 조회수가 증가하지 않습니다.");
         }
 
-        // 30초 내 중복 시청 방지
-        String redisKey = "viewing:" + userId + ":" + video.getVideoId();
-        if (redisTemplate.hasKey(redisKey)) {
-            System.out.println("30초 내 중복된 요청입니다. 조회수는 카운트되지 않습니다.");
-            return true;
+        String viewCountKey = "video:viewCount:" + video.getVideoId();
+        String ttlKey = "viewing:" + userId + ":" + video.getVideoId();
+
+        Long result = redisTemplate.execute(
+                luaScript,
+                Arrays.asList(viewCountKey, ttlKey),
+                String.valueOf(userId), String.valueOf(video.getOwnerId()), "30", "1"
+        );
+        System.out.println("Lua 스크립트 실행 결과: " + result);
+
+        // 결과 해석
+        if (result == -1) {
+            System.out.println("게시자가 자신의 동영상을 재생한 경우: 조회수 증가 안 함");
+        } else if (result == -2) {
+            System.out.println("중복 재생으로 간주: 조회수 증가 안 함");
+        } else {
+            System.out.println("조회수 증가 성공: 현재 조회수 - " + result);
         }
 
-        // TTL 중복 방지
-        redisTemplate.opsForValue().set(redisKey, "viewing", 30, TimeUnit.SECONDS);
-        return false;
+        Optional<PlayHistory> optionalPlayHistory = playHistoryRepository.findTopByUserIdAndVideoAndIsCompletedFalseOrderByViewDateDesc(userId, video);
+        int startFrom = optionalPlayHistory.map(PlayHistory::getLastPlayedAt).orElse(0);
+
+        PlayHistory newPlayHistory = new PlayHistory(userId, video, LocalDateTime.now(), startFrom);
+        newPlayHistory.setPlayTime(0);
+        newPlayHistory.setLastPlayedAt(startFrom);
+        playHistoryRepository.save(newPlayHistory);
+
+        return newPlayHistory;
     }
 
     @Transactional
@@ -103,4 +74,20 @@ public class PlayHistoryService {
         playHistoryRepository.save(playHistory);
     }
 
+    // TTL 설정을 제거하고 중복 요청 여부만 확인
+    public boolean isAbusiveAccess(Long userId, Video video) {
+        if (userId.equals(video.getOwnerId())) {
+            System.out.println("게시자는 자신의 동영상을 시청해도 조회수와 광고 시청 횟수가 증가하지 않습니다.");
+            return true;
+        }
+
+        String redisKey = "viewing:" + userId + ":" + video.getVideoId();
+        // 중복 요청 여부만 확인
+        if (redisTemplate.hasKey(redisKey)) {
+            System.out.println("30초 내 중복된 요청입니다. 조회수는 카운트되지 않습니다.");
+            return true;
+        }
+
+        return false;
+    }
 }

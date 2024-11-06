@@ -5,6 +5,7 @@ import com.example.contentservice.videohistory.PlayHistory;
 import com.example.contentservice.videohistory.PlayHistoryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.script.RedisScript;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -21,6 +22,7 @@ public class VideoService {
     private final PlayHistoryService playHistoryService;
     private final AdService adService;
     private final RedisTemplate<String, String> redisTemplate;
+    private final RedisScript<Long> luaScript;
 
     @Transactional
     public Video saveVideo(VideoDto videoDto) {
@@ -59,8 +61,11 @@ public class VideoService {
 
     @Scheduled(fixedRate = 60000)
     public void syncViewCountsToDatabase() {
-        // 비디오 조회수 동기화
+        System.out.println("syncViewCountsToDatabase 메서드 실행");
+
         Set<String> viewKeys = redisTemplate.keys("video:viewCount:*");
+        System.out.println("조회수 키 조회: " + viewKeys);
+
         if (viewKeys != null) {
             for (String key : viewKeys) {
                 String[] keyParts = key.split(":");
@@ -85,8 +90,9 @@ public class VideoService {
             }
         }
 
-        // 광고 조회수 동기화
         Set<String> adKeys = redisTemplate.keys("video:adViewCount:*");
+        System.out.println("광고 조회수 키 조회: " + adKeys);
+
         if (adKeys != null) {
             for (String key : adKeys) {
                 String[] keyParts = key.split(":");
@@ -111,6 +117,4 @@ public class VideoService {
             }
         }
     }
-
-
 }
