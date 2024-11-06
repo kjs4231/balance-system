@@ -1,10 +1,12 @@
-package com.example.batchservice.videostats;
+package com.example.batchservice.batch;
 
 import com.example.batchservice.revenuerate.RevenueRate;
 import com.example.batchservice.revenuerate.RevenueRateRepository;
 import com.example.batchservice.revenuerate.RevenueType;
 import com.example.batchservice.videorevenue.VideoRevenue;
 import com.example.batchservice.videorevenue.VideoRevenueRepository;
+import com.example.batchservice.videostats.VideoStatistics;
+import com.example.batchservice.videostats.VideoStatisticsRepository;
 import com.example.contentservice.video.VideoRepository;
 import com.example.contentservice.videohistory.PlayHistoryRepository;
 import lombok.RequiredArgsConstructor;
@@ -13,33 +15,27 @@ import org.slf4j.LoggerFactory;
 import org.springframework.batch.core.*;
 import org.springframework.batch.core.configuration.annotation.EnableBatchProcessing;
 import org.springframework.batch.core.job.builder.JobBuilder;
-import org.springframework.batch.core.partition.support.Partitioner;
 import org.springframework.batch.core.partition.support.TaskExecutorPartitionHandler;
 import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.batch.core.step.builder.StepBuilder;
-import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.batch.item.ItemWriter;
 import org.springframework.batch.item.data.RepositoryItemReader;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.task.TaskExecutor;
-import org.springframework.scheduling.annotation.EnableScheduling;
-import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.data.domain.Sort;
+import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
+import org.springframework.transaction.PlatformTransactionManager;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 @Configuration
 @EnableBatchProcessing
@@ -64,7 +60,6 @@ public class DayBatchJobConfig {
     public Job dayStatisticsJob() {
         return new JobBuilder("dayStatisticsJob", jobRepository)
                 .incrementer(parameters -> {
-                    // 날짜를 기준으로 멱등성을 보장하는 JobParameter 설정
                     String date = LocalDate.now().toString();
                     return new JobParametersBuilder(parameters)
                             .addString("date", date)
@@ -93,16 +88,18 @@ public class DayBatchJobConfig {
 
     @Bean
     public Step partitionedDayStatisticsStep() {
+        List<Long> videoIds = videoRepository.findAllVideoIds();
         return new StepBuilder("partitionedDayStatisticsStep", jobRepository)
-                .partitioner(dayStatisticsStep().getName(), partitioner())
+                .partitioner(dayStatisticsStep().getName(), new partitioner(videoIds))
                 .partitionHandler(statisticsPartitionHandler())
                 .build();
     }
 
     @Bean
     public Step partitionedDayRevenueStep() {
+        List<Long> videoIds = videoRepository.findAllVideoIds();
         return new StepBuilder("partitionedDayRevenueStep", jobRepository)
-                .partitioner(dayRevenueStep().getName(), partitioner())
+                .partitioner(dayRevenueStep().getName(), new partitioner(videoIds))
                 .partitionHandler(revenuePartitionHandler())
                 .build();
     }
@@ -116,22 +113,9 @@ public class DayBatchJobConfig {
                 .writer(statisticsWriter())
                 .faultTolerant()
                 .skip(Exception.class)
-                .skipLimit(3) // Skip limit adjusted for better fault tolerance control
+                .skipLimit(3)
                 .retry(Exception.class)
-                .retryLimit(2) // Retry limit adjusted to avoid excessive retries
-                .listener(new StepExecutionListener() {
-                    @Override
-                    public void beforeStep(StepExecution stepExecution) {
-                        JobParameters jobParameters = stepExecution.getJobParameters();
-                        String date = jobParameters.getString("date");
-                        logger.info("Processing statistics for date: {}", date);
-                    }
-
-                    @Override
-                    public ExitStatus afterStep(StepExecution stepExecution) {
-                        return ExitStatus.COMPLETED;
-                    }
-                })
+                .retryLimit(2)
                 .build();
     }
 
@@ -144,35 +128,10 @@ public class DayBatchJobConfig {
                 .writer(revenueWriter())
                 .faultTolerant()
                 .skip(Exception.class)
-                .skipLimit(3) // Skip limit adjusted for better control over fault tolerance
+                .skipLimit(3)
                 .retry(Exception.class)
-                .retryLimit(2) // Retry limit adjusted to avoid unnecessary retries
+                .retryLimit(2)
                 .build();
-    }
-
-    @Bean
-    public Partitioner partitioner() {
-        return gridSize -> {
-            List<Long> videoIds = videoRepository.findAllVideoIds();
-            long targetSize = (long) Math.ceil((double) videoIds.size() / gridSize);
-
-            Map<String, ExecutionContext> result = IntStream.range(0, gridSize)
-                    .filter(i -> i * targetSize < videoIds.size()) // Ensure valid range
-                    .mapToObj(i -> {
-                        ExecutionContext context = new ExecutionContext();
-                        long start = i * targetSize;
-                        long end = Math.min((i + 1) * targetSize, videoIds.size());
-                        if (start < end) { // Ensure subList is valid
-                            List<Long> partitionedVideoIds = new ArrayList<>(videoIds.subList((int) start, (int) end));
-                            context.put("videoIds", partitionedVideoIds);
-                        }
-                        return Map.entry("partition" + i, context);
-                    })
-                    .filter(entry -> entry.getValue().containsKey("videoIds")) // Filter out empty partitions
-                    .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
-
-            return result;
-        };
     }
 
     @Bean
@@ -180,7 +139,7 @@ public class DayBatchJobConfig {
         TaskExecutorPartitionHandler handler = new TaskExecutorPartitionHandler();
         handler.setStep(dayStatisticsStep());
         handler.setTaskExecutor(threadPoolTaskExecutor());
-        handler.setGridSize(4); // Assuming 4 partitions
+        handler.setGridSize(4);
         return handler;
     }
 
@@ -189,7 +148,7 @@ public class DayBatchJobConfig {
         TaskExecutorPartitionHandler handler = new TaskExecutorPartitionHandler();
         handler.setStep(dayRevenueStep());
         handler.setTaskExecutor(threadPoolTaskExecutor());
-        handler.setGridSize(4); // Assuming 4 partitions
+        handler.setGridSize(4);
         return handler;
     }
 
@@ -199,7 +158,7 @@ public class DayBatchJobConfig {
         executor.setCorePoolSize(10);
         executor.setMaxPoolSize(20);
         executor.setQueueCapacity(50);
-        executor.setThreadNamePrefix("BatchExecutor-"); // Added for better debugging and monitoring
+        executor.setThreadNamePrefix("BatchExecutor-");
         executor.initialize();
         return executor;
     }
@@ -229,24 +188,23 @@ public class DayBatchJobConfig {
             }
         };
     }
+
     @Bean
     public ItemWriter<VideoStatistics> statisticsWriter() {
-        return items -> {
-            for (VideoStatistics statistics : items) {
-                if (statistics != null) {
-                    logger.info("Writing statistics for videoId: {}", statistics.getVideoId());
-                    videoStatisticsRepository.save(statistics);
-                }
+        return items -> items.forEach(statistics -> {
+            if (statistics != null) {
+                logger.info("Writing statistics for videoId: {}", statistics.getVideoId());
+                videoStatisticsRepository.save(statistics);
             }
-        };
+        });
     }
+
     @Bean
     public ItemProcessor<Long, VideoRevenue> revenueProcessor() {
         return videoId -> {
             LocalDate yesterday = LocalDate.now().minusDays(1);
             logger.info("Processing revenue for videoId: {}", videoId);
 
-            // 데이터베이스에서 중복 여부를 확인하여 정산 데이터를 생성
             if (!videoRevenueRepository.existsByVideoIdAndDate(videoId, yesterday)) {
                 long totalViewCount = videoRepository.getViewCountByVideoId(videoId);
                 long totalAdViewCount = videoRepository.getAdViewCountByVideoId(videoId);
@@ -265,29 +223,22 @@ public class DayBatchJobConfig {
         };
     }
 
-
     @Bean
     public ItemWriter<VideoRevenue> revenueWriter() {
-        return items -> {
-            for (VideoRevenue revenue : items) {
-                if (revenue != null) {
-                    logger.info("Writing revenue for videoId: {}", revenue.getVideoId());
-                    videoRevenueRepository.save(revenue);
-                }
+        return items -> items.forEach(revenue -> {
+            if (revenue != null) {
+                logger.info("Writing revenue for videoId: {}", revenue.getVideoId());
+                videoRevenueRepository.save(revenue);
             }
-        };
+        });
     }
 
     private long getCachedPlayTime(Long videoId, LocalDate date) {
-        return cachedPlayTime.computeIfAbsent(videoId, id ->
-                playHistoryRepository.findPlayTimeByVideoIdAndDate(id, date)
-        );
+        return cachedPlayTime.computeIfAbsent(videoId, id -> playHistoryRepository.findPlayTimeByVideoIdAndDate(id, date));
     }
 
     private long getCachedViewCount(Long videoId, LocalDate date) {
-        return cachedViewCount.computeIfAbsent(videoId, id ->
-                playHistoryRepository.countByVideoIdAndDate(id, date)
-        );
+        return cachedViewCount.computeIfAbsent(videoId, id -> playHistoryRepository.countByVideoIdAndDate(id, date));
     }
 
     private BigDecimal calculateRevenue(long totalViews, long dailyViews, RevenueType revenueType) {
@@ -311,8 +262,6 @@ public class DayBatchJobConfig {
     }
 
     private List<RevenueRate> getRevenueRates(RevenueType revenueType) {
-        return revenueRateCache.computeIfAbsent(revenueType, type ->
-                revenueRateRepository.findAllByTypeOrderByMinViewsAsc(type)
-        );
+        return revenueRateCache.computeIfAbsent(revenueType, type -> revenueRateRepository.findAllByTypeOrderByMinViewsAsc(type));
     }
 }

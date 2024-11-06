@@ -3,9 +3,9 @@ package com.example.contentservice.video;
 import com.example.contentservice.ad.AdService;
 import com.example.contentservice.videohistory.PlayHistory;
 import com.example.contentservice.videohistory.PlayHistoryService;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.data.redis.core.script.RedisScript;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -22,7 +22,6 @@ public class VideoService {
     private final PlayHistoryService playHistoryService;
     private final AdService adService;
     private final RedisTemplate<String, String> redisTemplate;
-    private final RedisScript<Long> luaScript;
 
     @Transactional
     public Video saveVideo(VideoDto videoDto) {
@@ -32,14 +31,14 @@ public class VideoService {
     }
 
     @Transactional
-    public String playVideo(Long userId, Long videoId) {
+    public String playVideo(Long userId, Long videoId, HttpServletRequest request) {
         Video video = videoRepository.findById(videoId)
                 .orElseThrow(() -> new RuntimeException("동영상을 찾을 수 없습니다"));
 
-        PlayHistory playHistory = playHistoryService.handlePlay(userId, video);
+        PlayHistory playHistory = playHistoryService.handlePlay(userId, video, request);
 
         // 광고 재생 처리
-        adService.handleAdViews(video, userId, playHistory.getLastPlayedAt());
+        adService.handleAdViews(video, userId, playHistory.getLastPlayedAt(), request);
 
         int lastPlayedAt = playHistory.getLastPlayedAt();
 
@@ -49,14 +48,14 @@ public class VideoService {
     }
 
     @Transactional
-    public void pauseVideo(Long userId, Long videoId, int currentPlayedAt) {
+    public void pauseVideo(Long userId, Long videoId, int currentPlayedAt, HttpServletRequest request) {
         Video video = videoRepository.findById(videoId)
                 .orElseThrow(() -> new RuntimeException("동영상을 찾을 수 없습니다"));
 
         playHistoryService.handlePause(userId, video, currentPlayedAt);
 
         // 광고 재생 처리
-        adService.handleAdViews(video, userId, currentPlayedAt);
+        adService.handleAdViews(video, userId, currentPlayedAt, request);
     }
 
     @Scheduled(fixedRate = 60000)

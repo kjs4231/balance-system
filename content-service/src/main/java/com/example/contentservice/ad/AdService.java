@@ -2,6 +2,7 @@ package com.example.contentservice.ad;
 
 import com.example.contentservice.adhistory.AdHistoryService;
 import com.example.contentservice.video.Video;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.script.RedisScript;
@@ -22,8 +23,10 @@ public class AdService {
     private final RedisScript<Long> luaScript;
 
     @Transactional
-    public void handleAdViews(Video video, Long userId, int currentPlayedAt) {
-        if (isAdAbusiveAccess(userId, video)) {
+    public void handleAdViews(Video video, Long userId, int currentPlayedAt, HttpServletRequest request) {
+        String ip = getUserIp(request);
+
+        if (isAdAbusiveAccess(userId, video, ip)) {
             System.out.println("어뷰징으로 인해 광고 시청 횟수가 증가하지 않습니다.");
             return;
         }
@@ -43,7 +46,7 @@ public class AdService {
                 adHistoryService.saveAdHistoryIfNotExists(userId, ad, video, viewDate);
 
                 String adViewCountKey = "video:adViewCount:" + video.getVideoId();
-                String ttlKey = "ad_viewing:" + userId + ":" + video.getVideoId();
+                String ttlKey = "ad_viewing:" + userId + ":" + video.getVideoId() + ":" + ip;
 
                 Long result = redisTemplate.execute(
                         luaScript,
@@ -64,18 +67,26 @@ public class AdService {
         }
     }
 
-    public boolean isAdAbusiveAccess(Long userId, Video video) {
+    public boolean isAdAbusiveAccess(Long userId, Video video, String ip) {
         if (userId.equals(video.getOwnerId())) {
             System.out.println("게시자는 자신의 동영상을 시청해도 광고 시청 횟수가 증가하지 않습니다.");
             return true;
         }
 
-        String redisKey = "ad_viewing:" + userId + ":" + video.getVideoId();
+        String redisKey = "ad_viewing:" + userId + ":" + video.getVideoId() + ":" + ip;
         if (redisTemplate.hasKey(redisKey)) {
             System.out.println("30초 내 중복된 광고 시청 요청입니다. 광고 조회수는 카운트되지 않습니다.");
             return true;
         }
 
         return false;
+    }
+
+    private String getUserIp(HttpServletRequest request) {
+        String ipAddress = request.getHeader("X-Forwarded-For");
+        if (ipAddress == null || ipAddress.isEmpty() || "unknown".equalsIgnoreCase(ipAddress)) {
+            ipAddress = request.getRemoteAddr();
+        }
+        return ipAddress;
     }
 }
