@@ -62,7 +62,7 @@ public class DayBatchJobConfig {
     @Bean
     public Step partitionedDayStatisticsStep() {
         return new StepBuilder("partitionedDayStatisticsStep", jobRepository)
-                .partitioner(dayStatisticsStep().getName(), new partitioner(videoRepository.findAllVideoIds()))
+                .partitioner(dayStatisticsStep().getName(), new VideoPartitioner(videoRepository.findAllVideoIds()))
                 .partitionHandler(statisticsPartitionHandler())
                 .build();
     }
@@ -70,7 +70,7 @@ public class DayBatchJobConfig {
     @Bean
     public Step partitionedDayRevenueStep() {
         return new StepBuilder("partitionedDayRevenueStep", jobRepository)
-                .partitioner(dayRevenueStep().getName(), new partitioner(videoRepository.findAllVideoIds()))
+                .partitioner(dayRevenueStep().getName(), new VideoPartitioner(videoRepository.findAllVideoIds()))
                 .partitionHandler(revenuePartitionHandler())
                 .build();
     }

@@ -3,6 +3,7 @@ package com.example.contentservice.video;
 import com.example.contentservice.ad.AdService;
 import com.example.contentservice.videohistory.PlayHistory;
 import com.example.contentservice.videohistory.PlayHistoryService;
+import com.example.global.user.UserRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -22,16 +23,27 @@ public class VideoService {
     private final PlayHistoryService playHistoryService;
     private final AdService adService;
     private final RedisTemplate<String, String> redisTemplate;
+    private final UserRepository userRepository;
 
     @Transactional
     public Video saveVideo(VideoDto videoDto) {
         Long ownerId = videoDto.getOwnerId();
+
+        if (!userRepository.existsById(ownerId)) {
+            throw new RuntimeException("존재하지 않는 유저입니다.");
+        }
+
         Video video = new Video(videoDto.getTitle(), videoDto.getDuration(), ownerId);
         return videoRepository.save(video);
     }
 
     @Transactional
     public String playVideo(Long userId, Long videoId, HttpServletRequest request) {
+
+        if (!userRepository.existsById(userId)) {
+            throw new RuntimeException("존재하지 않는 유저입니다.");
+        }
+
         Video video = videoRepository.findById(videoId)
                 .orElseThrow(() -> new RuntimeException("동영상을 찾을 수 없습니다"));
 
@@ -49,6 +61,11 @@ public class VideoService {
 
     @Transactional
     public void pauseVideo(Long userId, Long videoId, int currentPlayedAt, HttpServletRequest request) {
+
+        if (!userRepository.existsById(userId)) {
+            throw new RuntimeException("존재하지 않는 유저입니다.");
+        }
+
         Video video = videoRepository.findById(videoId)
                 .orElseThrow(() -> new RuntimeException("동영상을 찾을 수 없습니다"));
 

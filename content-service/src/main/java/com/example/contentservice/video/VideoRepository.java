@@ -19,6 +19,4 @@ public interface VideoRepository extends JpaRepository<Video, Long> {
     @Query("SELECT v.videoId FROM Video v")
     List<Long> findAllVideoIds();
 
-    @Query("SELECT v.videoId FROM Video v")
-    Page<Long> findAllVideoIds(Pageable pageable);
 }
