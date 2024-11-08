@@ -32,7 +32,7 @@ public class AdService {
         }
 
         int[] adPlayTimes = {300, 600};
-        List<Ad> ads = adRepository.findAll();
+        List<Ad> ads = adRepository.findAllAds();
 
         if (ads.isEmpty()) {
             throw new RuntimeException("등록된 광고가 없습니다");
