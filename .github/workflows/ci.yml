@@ -1,0 +1,102 @@
+name: Java CI/CD with Gradle and Docker
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main", "develop" ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      # 1. 레포지토리 체크아웃
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2. JDK 17 설정
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      # 3. Gradle 설정
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      # 4. Gradle 파일 실행 권한 부여
+      - name: Grant execute permission for gradlew
+        run: chmod +x ./gradlew
+
+      # 5. MySQL 설정
+      - name: Setup MySQL
+        uses: samin/mysql-action@v1
+        with:
+          character set server: 'utf8'
+          mysql database: 'final'
+          mysql user: 'root'
+          mysql password: ${{ secrets.MYSQL_PASSWORD }}
+
+      # 6. Docker Compose 설치
+      - name: Install Docker Compose
+        run: |
+          sudo curl -L "https://github.com/docker/compose/releases/download/v2.2.3/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+          sudo chmod +x /usr/local/bin/docker-compose
+
+      # 7. Docker Compose로 MySQL 서비스 실행 (테스트용)
+      - name: Start MySQL for Testing
+        run: |
+          MYSQL_PASSWORD=${{ secrets.MYSQL_PASSWORD }} docker-compose up -d mysql_test
+          # MySQL이 준비될 때까지 대기
+          until docker exec mysql_test mysqladmin ping -h "localhost" --silent; do
+            echo "Waiting for MySQL to be ready..."
+            sleep 5
+          done
+          echo "MySQL is ready"
+          docker ps -a  # 실행 중인 모든 컨테이너 확인
+
+      # 8. Gradle 빌드 및 테스트
+      - name: Build and Test with Gradle Wrapper
+        run: ./gradlew build
+        env:
+          SPRING_PROFILES_ACTIVE: test
+          SPRING_DATASOURCE_URL: jdbc:mysql://localhost:3308/test_db
+          SPRING_DATASOURCE_USERNAME: root
+          SPRING_DATASOURCE_PASSWORD: 1234
+          SPRING_DATASOURCE_DRIVER_CLASS_NAME: com.mysql.cj.jdbc.Driver
+          SPRING_JPA_HIBERNATE_DDL_AUTO: update
+          SPRING_JPA_DATABASE_PLATFORM: org.hibernate.dialect.MySQL8Dialect
+          SPRING_JWT_SECRET: ${{ secrets.SPRING_JWT_SECRET }}
+
+      # 9. Docker 이미지 빌드
+      - name: Build Docker image
+        run: docker build -t kjs4231/balance-system .
+
+      # 10. Docker Compose로 Roll Out 시뮬레이션
+      - name: Roll Out Simulation with Docker Compose
+        run: |
+          MYSQL_PASSWORD=${{ secrets.MYSQL_PASSWORD }} docker-compose up -d
+          sleep 15
+          if docker ps | grep -q "balance-system"; then
+            echo "Roll Out simulation successful."
+          else
+            echo "Service failed, performing rollback simulation."
+            docker-compose down
+          fi
+
+      # 11. Docker Hub 로그인 및 이미지 푸시 (옵션)
+      - name: Log in to Docker Hub
+        if: github.ref == 'refs/heads/main'
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Push Docker image to Docker Hub
+        if: success() && github.ref == 'refs/heads/main'
+        run: docker push kjs4231/balance-system
