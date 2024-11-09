@@ -16,7 +16,7 @@ public class VideoStatistics {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long statisticId;
 
-    private Long videoId; // Video 객체 대신 videoId만 저장
+    private Long videoId;
 
     @Column(nullable = false)
     private LocalDate date;

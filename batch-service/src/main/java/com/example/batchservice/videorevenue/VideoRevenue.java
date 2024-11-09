@@ -15,7 +15,7 @@ public class VideoRevenue {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long revenueId;
 
-    private Long videoId; // Video 객체 대신 videoId만 저장
+    private Long videoId;
 
     private LocalDate date;
     private BigDecimal viewRevenue;

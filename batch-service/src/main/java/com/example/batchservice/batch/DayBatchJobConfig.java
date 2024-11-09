@@ -43,6 +43,8 @@ public class DayBatchJobConfig {
     private final RevenueRateRepository revenueRateRepository;
     private final VideoStatisticsRepository videoStatisticsRepository;
     private final PlayHistoryRepository playHistoryRepository;
+    private final RevenueWriter revenueWriter;
+    private final StatisticsWriter statisticsWriter;
 
     private final ConcurrentHashMap<RevenueType, List<RevenueRate>> revenueRateCache = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<Long, Long> cachedPlayTime = new ConcurrentHashMap<>();
@@ -80,9 +82,9 @@ public class DayBatchJobConfig {
     public Step dayStatisticsStep() {
         return new StepBuilder("dayStatisticsStep", jobRepository)
                 .<Long, VideoStatistics>chunk(10, transactionManager)
-                .reader(videoIdReader(videoRepository)) // 수정된 VideoIdReader 사용
+                .reader(videoIdReader(videoRepository))
                 .processor(new DayStatisticsProcessor(videoStatisticsRepository, playHistoryRepository, cachedPlayTime, cachedViewCount))
-                .writer(new StatisticsWriter(videoStatisticsRepository))
+                .writer(statisticsWriter)
                 .faultTolerant()
                 .skip(Exception.class)
                 .skipLimit(3)
@@ -95,9 +97,9 @@ public class DayBatchJobConfig {
     public Step dayRevenueStep() {
         return new StepBuilder("dayRevenueStep", jobRepository)
                 .<Long, VideoRevenue>chunk(10, transactionManager)
-                .reader(videoIdReader(videoRepository)) // 수정된 VideoIdReader 사용
+                .reader(videoIdReader(videoRepository))
                 .processor(new DayRevenueProcessor(videoRepository, videoRevenueRepository, revenueRateRepository, videoStatisticsRepository, playHistoryRepository, revenueRateCache))
-                .writer(new RevenueWriter(videoRevenueRepository))
+                .writer(revenueWriter)
                 .faultTolerant()
                 .skip(Exception.class)
                 .skipLimit(3)
