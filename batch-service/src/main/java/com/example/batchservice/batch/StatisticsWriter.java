@@ -17,9 +17,11 @@ public class StatisticsWriter implements ItemWriter<VideoStatistics> {
 
     @Override
     public void write(Chunk<? extends VideoStatistics> items) {
+        logger.info("size : {}", items.size());
         items.forEach(statistics -> {
             if (statistics != null) {
                 logger.info("Writing statistics for videoId: {}", statistics.getVideoId());
+
                 videoStatisticsRepository.save(statistics);
             }
         });

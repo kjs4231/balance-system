@@ -17,6 +17,7 @@ public class RevenueWriter implements ItemWriter<VideoRevenue> {
 
     @Override
     public void write(Chunk<? extends VideoRevenue> items) {
+        logger.info("size : {}", items.size());
         items.forEach(revenue -> {
             if (revenue != null) {
                 logger.info("Writing revenue for videoId: {}", revenue.getVideoId());

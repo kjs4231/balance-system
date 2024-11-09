@@ -1,8 +1,8 @@
 package com.example.batchservice.batch;
 
 import com.example.batchservice.revenuerate.RevenueRate;
-import com.example.batchservice.revenuerate.dsl.RevenueRateRepository;
 import com.example.batchservice.revenuerate.RevenueType;
+import com.example.batchservice.revenuerate.dsl.RevenueRateRepository;
 import com.example.batchservice.videorevenue.VideoRevenue;
 import com.example.batchservice.videorevenue.dsl.VideoRevenueRepository;
 import com.example.batchservice.videostats.VideoStatistics;
@@ -14,6 +14,7 @@ import org.springframework.batch.core.Job;
 import org.springframework.batch.core.JobParametersBuilder;
 import org.springframework.batch.core.Step;
 import org.springframework.batch.core.configuration.annotation.EnableBatchProcessing;
+import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.core.job.builder.JobBuilder;
 import org.springframework.batch.core.partition.support.TaskExecutorPartitionHandler;
 import org.springframework.batch.core.repository.JobRepository;
@@ -79,7 +80,7 @@ public class DayBatchJobConfig {
     public Step dayStatisticsStep() {
         return new StepBuilder("dayStatisticsStep", jobRepository)
                 .<Long, VideoStatistics>chunk(10, transactionManager)
-                .reader(new VideoIdReader(videoRepository))
+                .reader(videoIdReader(videoRepository)) // 수정된 VideoIdReader 사용
                 .processor(new DayStatisticsProcessor(videoStatisticsRepository, playHistoryRepository, cachedPlayTime, cachedViewCount))
                 .writer(new StatisticsWriter(videoStatisticsRepository))
                 .faultTolerant()
@@ -94,7 +95,7 @@ public class DayBatchJobConfig {
     public Step dayRevenueStep() {
         return new StepBuilder("dayRevenueStep", jobRepository)
                 .<Long, VideoRevenue>chunk(10, transactionManager)
-                .reader(new VideoIdReader(videoRepository))
+                .reader(videoIdReader(videoRepository)) // 수정된 VideoIdReader 사용
                 .processor(new DayRevenueProcessor(videoRepository, videoRevenueRepository, revenueRateRepository, videoStatisticsRepository, playHistoryRepository, revenueRateCache))
                 .writer(new RevenueWriter(videoRevenueRepository))
                 .faultTolerant()
@@ -132,5 +133,11 @@ public class DayBatchJobConfig {
         executor.setThreadNamePrefix("BatchExecutor-");
         executor.initialize();
         return executor;
+    }
+
+    @Bean
+    @StepScope
+    public VideoIdReader videoIdReader(VideoRepository videoRepository) {
+        return new VideoIdReader(videoRepository);
     }
 }
