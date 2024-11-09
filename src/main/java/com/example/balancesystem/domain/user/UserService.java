@@ -20,7 +20,7 @@ public class UserService {
 
     public void signup(UserDto userDto) {
 
-        // 사용자 존재 여부 확인
+        // 사용자 확인
         if (userRepository.existsByUsername(userDto.getUsername())) {
             return;
         }

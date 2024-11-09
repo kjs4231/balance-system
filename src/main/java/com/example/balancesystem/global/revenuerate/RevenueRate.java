@@ -13,17 +13,17 @@ public class RevenueRate {
     private Long revenueRateId;
 
     @Column(name = "min_views", nullable = true)
-    private Long minViews; // 조회수 최소 범위
+    private Long minViews;
 
     @Column(name = "max_views", nullable = true)
-    private Long maxViews; // 조회수 최대 범위
+    private Long maxViews;
 
     @Column(name = "rate", nullable = false)
-    private double rate; // 해당 구간의 단가
+    private double rate;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "type", nullable = false)
-    private RevenueType type; // 영상 조회수인지 광고 조회수인지 구분
+    private RevenueType type;
 
     public RevenueRate(Long minViews, Long maxViews, double rate, RevenueType type) {
         this.minViews = minViews;

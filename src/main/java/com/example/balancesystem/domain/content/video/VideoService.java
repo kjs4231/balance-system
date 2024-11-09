@@ -38,7 +38,6 @@ public class VideoService {
 
         PlayHistory playHistory = playHistoryService.handlePlay(userId, video, request);
 
-        // 광고 재생 처리
         adService.handleAdViews(video, userId, playHistory.getLastPlayedAt(), request);
 
         int lastPlayedAt = playHistory.getLastPlayedAt();
@@ -55,7 +54,6 @@ public class VideoService {
 
         playHistoryService.handlePause(userId, video, currentPlayedAt);
 
-        // 광고 재생 처리
         adService.handleAdViews(video, userId, currentPlayedAt, request);
     }
 

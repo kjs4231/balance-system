@@ -68,13 +68,10 @@ public class LoginFilter extends UsernamePasswordAuthenticationFilter {
         String role = auth.getAuthority();
 
         //토큰 생성
-        // String 타입이었던 role을 Role enum으로 변환
         Role roleEnum = Role.valueOf(role);
 
         String access = jwtUtil.createJwt("access", username, roleEnum, 600000L);
         String refresh = jwtUtil.createJwt("refresh", username, roleEnum, 86400000L);
-
-
 
         //Refresh 토큰 저장
         addRefreshEntity(username, refresh, 86400000L);
