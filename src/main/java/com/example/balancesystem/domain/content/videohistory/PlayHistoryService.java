@@ -6,8 +6,10 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.script.RedisScript;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.util.Arrays;
@@ -27,7 +29,7 @@ public class PlayHistoryService {
         String ip = getUserIp(request);
 
         if (isAbusiveAccess(userId, video, ip)) {
-            throw new IllegalStateException("어뷰징으로 인해 조회수가 증가하지 않습니다.");
+            throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS, "어뷰징으로 인해 조회수가 증가하지 않습니다.");
         }
 
         // TTL 키 생성

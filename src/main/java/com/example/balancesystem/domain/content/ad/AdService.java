@@ -7,8 +7,10 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.script.RedisScript;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
 import java.util.Arrays;
@@ -28,8 +30,7 @@ public class AdService {
         String ip = getUserIp(request);
 
         if (isAdAbusiveAccess(userId, video, ip)) {
-            System.out.println("어뷰징으로 인해 광고 시청 횟수가 증가하지 않습니다.");
-            return;
+            throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS, "어뷰징으로 인해 조회수가 증가하지 않습니다.");
         }
 
         int[] adPlayTimes = {300, 600};
