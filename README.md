@@ -71,7 +71,7 @@ balance-system/
    ```
 
 3. **애플리케이션 설정**
-   - `application.yml`에서 Redis와 MySQL 설정을 환경에 맞게 수정합니다.
+   - `application.properties`에서 Redis와 MySQL 설정을 환경에 맞게 수정합니다.
 
 4. **Docker 설정**
    ```bash
