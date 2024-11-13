@@ -113,6 +113,10 @@ POST /videos/{videoId}/pause?userId={userId}&currentPlayedAt={playedAt}
    ```
 
 ---
+## 📊 ERD 다이어그램
+
+![ERD 다이어그램](./erd.png)
+
 
 ## 📚 API 명세서
 | 메서드    | 엔드포인트                | 설명                                    | 요청 예시                                |
