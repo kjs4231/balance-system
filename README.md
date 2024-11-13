@@ -52,7 +52,7 @@ balance-system/
 - **Spring Boot 3.4**
 - **MySQL**
 - **Redis**
-- **Docker** (선택)
+- **Docker**
 
 ### 설치 방법
 1. **Repository 복제**
