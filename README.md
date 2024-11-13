@@ -95,10 +95,12 @@ POST /videos/{videoId}/play?userId={userId}
 ```
 - **설명**: 특정 유저가 영상을 재생
 - **응답 예시**:
+  
    ```json
    "동영상을 처음부터 재생합니다."
    ```
    또는
+  
   ```json
   "동영상을 {lastPlayedAt}초부터 이어서 재생합니다."
 
@@ -110,6 +112,7 @@ POST /videos/{videoId}/pause?userId={userId}&currentPlayedAt={playedAt}
 ```
 - **설명**: 시청시간으로 영상 재생을 정지
 - **응답 예시**:
+  
    ```json
    "동영상 재생을 중단했습니다."
    ```
