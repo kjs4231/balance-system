@@ -65,10 +65,11 @@ balance-system/
 2. **환경 변수 설정**
    - 프로젝트 루트 디렉토리에 `.env` 파일을 생성하여 필요한 환경 변수를 설정합니다.
    ```plaintext
-   JWT_SECRET=your_jwt_secret
-   DATABASE_URL=your_database_url
-   REDIS_HOST=your_redis_host
+   MYSQL_ROOT_PASSWORD=your_password
+   MYSQL_PASSWORD=your_database_password
+   SPRING_REDIS_PASSWORD=your_redis_password
    ```
+
 
 3. **애플리케이션 설정**
    - `application.properties`에서 Redis와 MySQL 설정을 환경에 맞게 수정합니다.
