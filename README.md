@@ -27,7 +27,7 @@ balance-system/
 ├── domain/
 │   ├── content/
 │   │   ├── ad/           # 광고 도메인 관련 클래스
-│   │   ├── video/        # 동영상 도메인 관련 클래스
+│   │   ├── video/        # 영상 도메인 관련 클래스
 │   │   ├── videohistory/ # 재생 이력 관리 클래스
 │   │   └── adhistory/    # 광고 시청 이력 관리 클래스
 │   └── user/             # 사용자 인증 및 JWT 관련 클래스
@@ -48,7 +48,7 @@ balance-system/
 ---
 
 ## 🚀 설치 및 실행
-### Prerequisites
+### 사전 준비 사항
 - **Java 17**
 - **Spring Boot 3.4**
 - **MySQL**
@@ -106,7 +106,7 @@ balance-system/
 ## 📖 사용 예제
 > **영상 재생 및 정지 API 예제**
 
-### 1. 동영상 재생
+### 1. 영상 재생
 ```http
 POST /videos/{videoId}/play?userId={userId}
 ```
@@ -143,7 +143,7 @@ POST /videos/{videoId}/pause?userId={userId}&currentPlayedAt={playedAt}
 local count_key = KEYS[1]         -- 조회수 또는 광고 시청 수를 증가시킬 키
 local ttl_key = KEYS[2]           -- 중복 방지를 위한 TTL 키
 local user_id = ARGV[1]           -- 사용자 ID 또는 고유 인증키
-local owner_id = ARGV[2]          -- 동영상 소유자 ID
+local owner_id = ARGV[2]          -- 영상 소유자 ID
 local ttl_value = tonumber(ARGV[3])   -- TTL 시간 (초)
 local increment_value = tonumber(ARGV[4]) -- 증가할 값 (1)
 
