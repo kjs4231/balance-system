@@ -86,7 +86,7 @@ balance-system/
 ---
 
 ## 📖 사용 예제
-> **영상 재생 및 일시 정지 API 예제**
+> **영상 재생 및 정지 API 예제**
 
 ### 1. 동영상 재생
 ```http
@@ -103,7 +103,7 @@ POST /videos/{videoId}/play?userId={userId}
 
    ```
 
-### 2. 영상 일시 정지
+### 2. 영상 정지
 ```http
 POST /videos/{videoId}/pause?userId={userId}&currentPlayedAt={playedAt}
 ```
