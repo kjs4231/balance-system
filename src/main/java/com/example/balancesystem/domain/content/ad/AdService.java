@@ -1,8 +1,8 @@
 package com.example.balancesystem.domain.content.ad;
 
 import com.example.balancesystem.domain.content.ad.dsl.AdRepository;
-import com.example.balancesystem.domain.content.video.Video;
 import com.example.balancesystem.domain.content.adhistory.AdHistoryService;
+import com.example.balancesystem.domain.content.video.Video;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -20,10 +20,10 @@ import java.util.List;
 @RequiredArgsConstructor
 public class AdService {
 
-    private final AdHistoryService adHistoryService;
-    private final AdRepository adRepository;
     private final RedisTemplate<String, String> redisTemplate;
     private final RedisScript<Long> luaScript;
+    private final AdHistoryService adHistoryService;
+    private final AdRepository adRepository;
 
     @Transactional
     public void handleAdViews(Video video, Long userId, int currentPlayedAt, HttpServletRequest request) {
@@ -47,7 +47,7 @@ public class AdService {
 
                 adHistoryService.saveAdHistoryIfNotExists(userId, ad, video, viewDate);
 
-                String adViewCountKey = "video:adViewCount:" + video.getVideoId();
+                String adViewCountKey = "video:" + video.getVideoId();
                 String ttlKey = "ad_viewing:" + userId + ":" + video.getVideoId() + ":" + ip;
 
                 Long result = redisTemplate.execute(
@@ -57,14 +57,12 @@ public class AdService {
                 );
 
                 if (result == -1) {
-                    System.out.println("게시자가 자신의 동영상을 재생한 경우: 조회수 증가 안 함");
+                    System.out.println("게시자가 자신의 광고를 본 경우: 조회수 증가 안 함");
                 } else if (result == -2) {
                     System.out.println("중복 재생으로 간주: 조회수 증가 안 함");
                 } else {
                     System.out.println("광고 조회수 증가 성공: 현재 조회수 - " + result);
                 }
-
-                System.out.println("광고 시청 기록 저장 완료: 사용자 ID - " + userId + ", 광고 ID - " + ad.getAdId() + ", 영상 ID - " + video.getVideoId());
             }
         }
     }
@@ -85,10 +83,8 @@ public class AdService {
     }
 
     private String getUserIp(HttpServletRequest request) {
-        String ipAddress = request.getHeader("X-Forwarded-For");
-        if (ipAddress == null || ipAddress.isEmpty() || "unknown".equalsIgnoreCase(ipAddress)) {
-            ipAddress = request.getRemoteAddr();
-        }
-        return ipAddress;
+        String ip = request.getHeader("X-Forwarded-For");
+        return (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip))
+                ? request.getRemoteAddr() : ip;
     }
 }

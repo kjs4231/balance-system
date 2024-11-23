@@ -28,7 +28,7 @@ public class QVideo extends EntityPathBase<Video> {
 
     public final NumberPath<Long> ownerId = createNumber("ownerId", Long.class);
 
-    public final ListPath<com.example.balancesystem.domain.content.videohistory.PlayHistory, com.example.balancesystem.domain.content.videohistory.QPlayHistory> playHistories = this.<com.example.balancesystem.domain.content.videohistory.PlayHistory, com.example.balancesystem.domain.content.videohistory.QPlayHistory>createList("playHistories", com.example.balancesystem.domain.content.videohistory.PlayHistory.class, com.example.balancesystem.domain.content.videohistory.QPlayHistory.class, PathInits.DIRECT2);
+    public final ListPath<com.example.balancesystem.domain.content.playhistory.PlayHistory, com.example.balancesystem.domain.content.playhistory.QPlayHistory> playHistories = this.<com.example.balancesystem.domain.content.playhistory.PlayHistory, com.example.balancesystem.domain.content.playhistory.QPlayHistory>createList("playHistories", com.example.balancesystem.domain.content.playhistory.PlayHistory.class, com.example.balancesystem.domain.content.playhistory.QPlayHistory.class, PathInits.DIRECT2);
 
     public final StringPath title = createString("title");
 

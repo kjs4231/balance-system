@@ -1,7 +1,7 @@
 package com.example.balancesystem.global.batch;
 
 import com.example.balancesystem.domain.content.video.dsl.VideoRepository;
-import com.example.balancesystem.domain.content.videohistory.dsl.PlayHistoryRepository;
+import com.example.balancesystem.domain.content.playhistory.dsl.PlayHistoryRepository;
 import com.example.balancesystem.global.revenuerate.RevenueRate;
 import com.example.balancesystem.global.revenuerate.RevenueType;
 import com.example.balancesystem.global.revenuerate.dsl.RevenueRateRepository;

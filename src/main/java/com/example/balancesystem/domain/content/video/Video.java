@@ -1,7 +1,7 @@
 package com.example.balancesystem.domain.content.video;
 
 import com.example.balancesystem.domain.content.adhistory.AdHistory;
-import com.example.balancesystem.domain.content.videohistory.PlayHistory;
+import com.example.balancesystem.domain.content.playhistory.PlayHistory;
 import jakarta.persistence.*;
 import lombok.Getter;
 
@@ -10,7 +10,9 @@ import java.util.List;
 
 @Entity
 @Getter
-@Table(name = "video")
+@Table(name = "video", indexes = {
+        @Index(name = "idx_video_view_ad_count", columnList = "videoId, viewCount, adViewCount")
+})
 public class Video {
 
     @Id

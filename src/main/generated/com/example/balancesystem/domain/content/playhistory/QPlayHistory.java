@@ -1,4 +1,4 @@
-package com.example.balancesystem.domain.content.videohistory;
+package com.example.balancesystem.domain.content.playhistory;
 
 import static com.querydsl.core.types.PathMetadataFactory.*;
 
@@ -16,7 +16,7 @@ import com.querydsl.core.types.dsl.PathInits;
 @Generated("com.querydsl.codegen.DefaultEntitySerializer")
 public class QPlayHistory extends EntityPathBase<PlayHistory> {
 
-    private static final long serialVersionUID = -1639749738L;
+    private static final long serialVersionUID = 15559559L;
 
     private static final PathInits INITS = PathInits.DIRECT2;
 

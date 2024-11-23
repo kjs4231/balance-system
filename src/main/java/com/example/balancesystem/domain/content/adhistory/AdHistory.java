@@ -11,7 +11,9 @@ import java.time.LocalDate;
 @Entity
 @Getter
 @NoArgsConstructor
-@Table(name = "ad_history")
+@Table(name = "ad_history", indexes = {
+        @Index(name = "idx_user_ad_video_date", columnList = "userId, ad_id, video_id, viewDate")
+})
 public class AdHistory {
 
     @Id
