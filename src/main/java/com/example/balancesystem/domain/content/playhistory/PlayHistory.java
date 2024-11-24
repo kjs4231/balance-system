@@ -10,7 +10,7 @@ import java.time.LocalDateTime;
 @Getter
 @Access(AccessType.FIELD)
 @Table(name = "play_history", indexes = {
-        @Index(name = "idx_user_video_completed_date", columnList = "userId, video_id, isCompleted, viewDate")
+        @Index(name = "idx_user_video_completed_date", columnList = "userId, video_id, completed, viewDate")
 })
 public class PlayHistory {
     @Id
