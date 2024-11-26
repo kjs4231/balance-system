@@ -1,7 +1,7 @@
-package com.example.balancesystem.domain.content.videohistory.dsl;
+package com.example.balancesystem.domain.content.playhistory.dsl;
 
 import com.example.balancesystem.domain.content.video.Video;
-import com.example.balancesystem.domain.content.videohistory.PlayHistory;
+import com.example.balancesystem.domain.content.playhistory.PlayHistory;
 
 import java.time.LocalDate;
 import java.util.Optional;

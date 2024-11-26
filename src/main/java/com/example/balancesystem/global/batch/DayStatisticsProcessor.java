@@ -1,6 +1,6 @@
 package com.example.balancesystem.global.batch;
 
-import com.example.balancesystem.domain.content.videohistory.dsl.PlayHistoryRepository;
+import com.example.balancesystem.domain.content.playhistory.dsl.PlayHistoryRepository;
 import com.example.balancesystem.global.videostats.VideoStatistics;
 import com.example.balancesystem.global.videostats.dsl.VideoStatisticsRepository;
 import org.slf4j.Logger;

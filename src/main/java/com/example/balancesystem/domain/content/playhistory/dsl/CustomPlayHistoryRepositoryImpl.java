@@ -1,10 +1,10 @@
-package com.example.balancesystem.domain.content.videohistory.dsl;
+package com.example.balancesystem.domain.content.playhistory.dsl;
 
 
 import com.example.balancesystem.domain.content.adhistory.QAdHistory;
 import com.example.balancesystem.domain.content.video.Video;
-import com.example.balancesystem.domain.content.videohistory.PlayHistory;
-import com.example.balancesystem.domain.content.videohistory.QPlayHistory;
+import com.example.balancesystem.domain.content.playhistory.PlayHistory;
+import com.example.balancesystem.domain.content.playhistory.QPlayHistory;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import org.springframework.stereotype.Repository;
 

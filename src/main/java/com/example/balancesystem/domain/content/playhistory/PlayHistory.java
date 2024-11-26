@@ -1,4 +1,4 @@
-package com.example.balancesystem.domain.content.videohistory;
+package com.example.balancesystem.domain.content.playhistory;
 
 import com.example.balancesystem.domain.content.video.Video;
 import jakarta.persistence.*;
@@ -9,7 +9,9 @@ import java.time.LocalDateTime;
 @Entity
 @Getter
 @Access(AccessType.FIELD)
-@Table(name = "play_history")
+@Table(name = "play_history", indexes = {
+        @Index(name = "idx_user_video_completed_date", columnList = "userId, video_id, completed, viewDate")
+})
 public class PlayHistory {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

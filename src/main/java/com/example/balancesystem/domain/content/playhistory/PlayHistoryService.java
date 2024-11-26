@@ -1,7 +1,7 @@
-package com.example.balancesystem.domain.content.videohistory;
+package com.example.balancesystem.domain.content.playhistory;
 
+import com.example.balancesystem.domain.content.playhistory.dsl.PlayHistoryRepository;
 import com.example.balancesystem.domain.content.video.Video;
-import com.example.balancesystem.domain.content.videohistory.dsl.PlayHistoryRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.RedisTemplate;
