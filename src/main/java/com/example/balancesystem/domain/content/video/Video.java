@@ -55,4 +55,5 @@ public class Video {
         this.adViewCount += count;
     }
 
+
 }

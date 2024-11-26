@@ -1,38 +1,92 @@
 package com.example.balancesystem.domain.content.video;
 
-import com.example.balancesystem.domain.content.video.dsl.VideoRepository;
-import com.example.balancesystem.domain.content.playhistory.PlayHistoryService;
 import com.example.balancesystem.domain.content.ad.AdService;
 import com.example.balancesystem.domain.content.playhistory.PlayHistory;
+import com.example.balancesystem.domain.content.playhistory.PlayHistoryService;
+import com.example.balancesystem.domain.content.video.Video;
+import com.example.balancesystem.domain.content.video.VideoDto;
+import com.example.balancesystem.domain.content.video.dsl.VideoRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.data.redis.core.script.RedisScript;
 import org.springframework.scheduling.annotation.Async;
-import org.springframework.scheduling.annotation.EnableAsync;
+import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-@EnableAsync
+@EnableScheduling
 public class VideoService {
 
     private final VideoRepository videoRepository;
     private final PlayHistoryService playHistoryService;
     private final AdService adService;
-    private final RedisTemplate<String, String> redisTemplate;
-    private final RedisScript<Long> luaScript;
+    private final RedisTemplate<String, Object> redisTemplate;
 
-    /**
-     * 동영상 저장
-     */
+    private static final String VIDEO_CACHE_KEY_PREFIX = "video:details:";
+    private static final String VIEW_COUNT_KEY_PREFIX = "video:viewCount:";
+
+    private String getVideoCacheKey(Long videoId) {
+        return VIDEO_CACHE_KEY_PREFIX + videoId;
+    }
+
+    private String getViewCountCacheKey(Long videoId) {
+        return VIEW_COUNT_KEY_PREFIX + videoId;
+    }
+
+    // Redis multi-get 최적화
+    public Map<String, VideoDto> getVideosByIds(List<Long> videoIds) {
+        List<String> cacheKeys = videoIds.stream()
+                .map(id -> getVideoCacheKey(id))
+                .collect(Collectors.toList());
+
+        // Redis에서 여러 키를 동시에 조회
+        List<Object> cachedVideos = redisTemplate.opsForValue().multiGet(cacheKeys);
+
+        // 결과 처리
+        Map<String, VideoDto> videoMap = new HashMap<>();
+        for (int i = 0; i < cachedVideos.size(); i++) {
+            if (cachedVideos.get(i) != null) {
+                videoMap.put(cacheKeys.get(i), (VideoDto) cachedVideos.get(i));
+            }
+        }
+        return videoMap;
+    }
+
+    @Transactional(readOnly = true)
+    public VideoDto getVideo(Long videoId) {
+        String cacheKey = getVideoCacheKey(videoId);
+
+        // Redis에서 VideoDto 조회
+        VideoDto cachedVideo = (VideoDto) redisTemplate.opsForValue().get(cacheKey);
+        if (cachedVideo != null) {
+            long cacheAge = System.currentTimeMillis() - redisTemplate.getExpire(cacheKey, TimeUnit.MILLISECONDS);
+            // 5분 이내라면 캐시 사용
+            if (cacheAge < 300000) {
+                return cachedVideo;
+            }
+        }
+
+        // Redis에 데이터 없으면 DB에서 조회
+        Video video = videoRepository.findById(videoId)
+                .orElseThrow(() -> new RuntimeException("동영상을 찾을 수 없습니다"));
+
+        // 비디오 정보를 Redis에 캐시 (캐시 갱신)
+        VideoDto videoDto = new VideoDto(video.getTitle(), video.getDuration(), video.getOwnerId());
+        redisTemplate.opsForValue().set(cacheKey, videoDto, 10, TimeUnit.MINUTES);
+
+        return videoDto;
+    }
+
     @Transactional
     public Video saveVideo(VideoDto videoDto) {
         Long ownerId = videoDto.getOwnerId();
@@ -40,104 +94,76 @@ public class VideoService {
         return videoRepository.save(video);
     }
 
-    /**
-     * 동영상 재생
-     */
     @Transactional
     public String playVideo(Long userId, Long videoId, HttpServletRequest request) {
+        // 여기서 여러 비디오를 조회할 때 getVideosByIds를 사용
+        Map<String, VideoDto> videoDtos = getVideosByIds(List.of(videoId));
+
+        // 비디오가 캐시되지 않으면 DB에서 조회
+        VideoDto videoDto = videoDtos.get(getVideoCacheKey(videoId));
+        if (videoDto == null) {
+            videoDto = getVideo(videoId);
+        }
+
         Video video = videoRepository.findById(videoId)
                 .orElseThrow(() -> new RuntimeException("동영상을 찾을 수 없습니다"));
 
         PlayHistory playHistory = playHistoryService.handlePlay(userId, video, request);
-
         adService.handleAdViews(video, userId, playHistory.getLastPlayedAt(), request);
 
         int lastPlayedAt = playHistory.getLastPlayedAt();
-        String hashKey = "video:stats:" + videoId; // Redis Hash Key
-        String ttlField = "ttl:" + userId; // TTL 필드 이름
-        String countField = "view_count"; // 조회수 필드 이름
-
-        // Lua 스크립트 실행
-        Long result = redisTemplate.execute(
-                luaScript,
-                Arrays.asList(hashKey),
-                ttlField, countField, "30", "1"
-        );
-
-        if (result == -1) {
-            return "게시자가 자신의 동영상을 시청했습니다.";
-        } else if (result == -2) {
-            return "중복 요청으로 조회수가 증가하지 않습니다.";
-        }
-
-        return lastPlayedAt == 0 || lastPlayedAt >= video.getDuration()
+        return lastPlayedAt == 0 || lastPlayedAt >= videoDto.getDuration()
                 ? "동영상을 처음부터 재생합니다."
                 : "동영상을 " + lastPlayedAt + "초부터 이어서 재생합니다.";
     }
 
-    /**
-     * 동영상 재생 중지
-     */
     @Transactional
     public void pauseVideo(Long userId, Long videoId, int currentPlayedAt, HttpServletRequest request) {
         Video video = videoRepository.findById(videoId)
                 .orElseThrow(() -> new RuntimeException("동영상을 찾을 수 없습니다"));
 
-        // PlayHistory 업데이트
         playHistoryService.handlePause(userId, video, currentPlayedAt);
-
-        // 광고 조회수 업데이트
         adService.handleAdViews(video, userId, currentPlayedAt, request);
     }
 
-    /**
-     * Redis의 조회수를 MySQL로 동기화
-     */
-    @Async
-    @Scheduled(fixedRate = 60000) // 1분마다 실행
+    // 조회수 동기화 작업을 비동기적으로 처리
+    @Scheduled(fixedRate = 60000)
     public void syncViewCountsToDatabase() {
-        System.out.println("조회수 동기화 시작");
+        Set<String> viewKeys = redisTemplate.keys(VIEW_COUNT_KEY_PREFIX + "*");
+        if (viewKeys != null) {
+            for (String key : viewKeys) {
+                try {
+                    String videoIdStr = key.replace(VIEW_COUNT_KEY_PREFIX, "");
+                    Long videoId = Long.parseLong(videoIdStr);
 
-        Set<String> videoKeys = redisTemplate.keys("video:stats:*");
-        Map<Long, Integer> viewCounts = new HashMap<>();
+                    Object countObj = redisTemplate.opsForValue().get(key);
+                    if (countObj != null) {
+                        int count;
+                        if (countObj instanceof Integer) {
+                            count = (Integer) countObj;
+                        } else if (countObj instanceof String) {
+                            count = Integer.parseInt((String) countObj);
+                        } else {
+                            throw new IllegalStateException("Unexpected data type for view count: " + countObj.getClass());
+                        }
 
-        if (videoKeys != null) {
-            videoKeys.forEach(key -> {
-                String videoIdStr = key.split(":")[2];
-                Long videoId = Long.parseLong(videoIdStr);
-                String viewCountStr = (String) redisTemplate.opsForHash().get(key, "view_count");
-
-                if (viewCountStr != null) {
-                    int viewCount = Integer.parseInt(viewCountStr);
-                    viewCounts.put(videoId, viewCount);
-                    redisTemplate.delete(key); // Redis 데이터 삭제
+                        // 비동기적으로 조회수 동기화
+                        syncViewCountAsync(videoId, count);
+                    }
+                } catch (Exception e) {
+                    System.out.println("조회수 동기화 오류: " + e.getMessage());
                 }
-            });
-
-            syncViewCountsBatch(viewCounts); // 배치 동기화
+            }
         }
     }
 
-    /**
-     * MySQL에 조회수 배치 업데이트
-     */
-    @Transactional
-    public void syncViewCountsBatch(Map<Long, Integer> viewCounts) {
-        viewCounts.forEach((videoId, count) -> {
-            videoRepository.findById(videoId).ifPresent(video -> {
-                video.increaseViewCountBy(count);
-                videoRepository.save(video);
-                System.out.println("동기화 완료: 비디오 ID - " + videoId + ", 조회수: " + count);
-            });
+    // 비동기적으로 조회수 업데이트
+    @Async
+    public void syncViewCountAsync(Long videoId, int count) {
+        videoRepository.findById(videoId).ifPresent(video -> {
+            video.increaseViewCountBy(count);
+            videoRepository.save(video);
         });
-    }
-
-    /**
-     * 사용자 IP 가져오기
-     */
-    private String getUserIp(HttpServletRequest request) {
-        String ip = request.getHeader("X-Forwarded-For");
-        return (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip))
-                ? request.getRemoteAddr() : ip;
+        redisTemplate.delete(getViewCountCacheKey(videoId));
     }
 }
