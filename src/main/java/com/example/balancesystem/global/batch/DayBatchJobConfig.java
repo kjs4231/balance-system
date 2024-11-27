@@ -1,12 +1,10 @@
 package com.example.balancesystem.global.batch;
 
-
 import com.example.balancesystem.domain.content.video.dsl.VideoRepository;
 import com.example.balancesystem.domain.content.playhistory.dsl.PlayHistoryRepository;
-import com.example.balancesystem.global.revenuerate.RevenueRate;
 import com.example.balancesystem.global.revenuerate.RevenueType;
-import com.example.balancesystem.global.revenuerate.dsl.RevenueRateRepository;
 import com.example.balancesystem.global.videorevenue.VideoRevenue;
+import com.example.balancesystem.global.revenuerate.dsl.RevenueRateRepository;
 import com.example.balancesystem.global.videorevenue.dsl.VideoRevenueRepository;
 import com.example.balancesystem.global.videostats.VideoStatistics;
 import com.example.balancesystem.global.videostats.dsl.VideoStatisticsRepository;
@@ -15,7 +13,6 @@ import org.springframework.batch.core.Job;
 import org.springframework.batch.core.JobParametersBuilder;
 import org.springframework.batch.core.Step;
 import org.springframework.batch.core.configuration.annotation.EnableBatchProcessing;
-import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.core.job.builder.JobBuilder;
 import org.springframework.batch.core.partition.support.TaskExecutorPartitionHandler;
 import org.springframework.batch.core.repository.JobRepository;
@@ -28,8 +25,6 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.transaction.PlatformTransactionManager;
 
 import java.time.LocalDate;
-import java.util.List;
-import java.util.concurrent.ConcurrentHashMap;
 
 @Configuration
 @EnableBatchProcessing
@@ -46,10 +41,6 @@ public class DayBatchJobConfig {
     private final PlayHistoryRepository playHistoryRepository;
     private final RevenueWriter revenueWriter;
     private final StatisticsWriter statisticsWriter;
-
-    private final ConcurrentHashMap<RevenueType, List<RevenueRate>> revenueRateCache = new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<Long, Long> cachedPlayTime = new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<Long, Long> cachedViewCount = new ConcurrentHashMap<>();
 
     @Bean
     public Job dayStatisticsJob() {
@@ -84,7 +75,7 @@ public class DayBatchJobConfig {
         return new StepBuilder("dayStatisticsStep", jobRepository)
                 .<Long, VideoStatistics>chunk(10, transactionManager)
                 .reader(videoIdReader(videoRepository))
-                .processor(new DayStatisticsProcessor(videoStatisticsRepository, playHistoryRepository, cachedPlayTime, cachedViewCount))
+                .processor(new DayStatisticsProcessor(videoStatisticsRepository, playHistoryRepository))
                 .writer(statisticsWriter)
                 .faultTolerant()
                 .skip(Exception.class)
@@ -99,7 +90,7 @@ public class DayBatchJobConfig {
         return new StepBuilder("dayRevenueStep", jobRepository)
                 .<Long, VideoRevenue>chunk(10, transactionManager)
                 .reader(videoIdReader(videoRepository))
-                .processor(new DayRevenueProcessor(videoRepository, videoRevenueRepository, revenueRateRepository, videoStatisticsRepository, playHistoryRepository, revenueRateCache))
+                .processor(new DayRevenueProcessor(videoRepository, videoRevenueRepository, revenueRateRepository, videoStatisticsRepository, playHistoryRepository))
                 .writer(revenueWriter)
                 .faultTolerant()
                 .skip(Exception.class)
@@ -139,7 +130,6 @@ public class DayBatchJobConfig {
     }
 
     @Bean
-    @StepScope
     public VideoIdReader videoIdReader(VideoRepository videoRepository) {
         return new VideoIdReader(videoRepository);
     }
