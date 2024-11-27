@@ -20,11 +20,11 @@ public class DayStatisticsProcessor implements ItemProcessor<Long, VideoStatisti
         this.videoStatisticsRepository = videoStatisticsRepository;
         this.playHistoryRepository = playHistoryRepository;
     }
-
     @Override
-    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    //    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public VideoStatistics process(Long videoId) {
-        LocalDate yesterday = LocalDate.now().minusDays(1);
+        long startTime = System.currentTimeMillis();
+        LocalDate yesterday = LocalDate.now();
         logger.info("Processing statistics for videoId: {}", videoId);
 
         if (!videoStatisticsRepository.existsByVideoIdAndDate(videoId, yesterday)) {
@@ -32,10 +32,15 @@ public class DayStatisticsProcessor implements ItemProcessor<Long, VideoStatisti
             long viewCount = playHistoryRepository.countByVideoIdAndDate(videoId, yesterday);
             long adViewCount = playHistoryRepository.countAdViewsByVideoIdAndDate(videoId, yesterday);
 
+            long endTime = System.currentTimeMillis();
+            logger.info("Statistics processing for videoId {} completed in {} ms", videoId, (endTime - startTime));
+
             return new VideoStatistics(videoId, yesterday, viewCount, totalPlayTime, adViewCount);
         } else {
-            logger.info("Duplicate statistics data exists: video_id={}, date={}", videoId, yesterday);
+            long endTime = System.currentTimeMillis();
+            logger.info("Duplicate statistics data for videoId {} checked in {} ms", videoId, (endTime - startTime));
             return null;
         }
     }
+
 }

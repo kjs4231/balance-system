@@ -36,11 +36,11 @@ public class DayRevenueProcessor implements ItemProcessor<Long, VideoRevenue> {
         this.videoStatisticsRepository = videoStatisticsRepository;
         this.playHistoryRepository = playHistoryRepository;
     }
-
     @Override
-    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    //    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public VideoRevenue process(Long videoId) {
-        LocalDate yesterday = LocalDate.now().minusDays(1);
+        long startTime = System.currentTimeMillis();
+        LocalDate yesterday = LocalDate.now();
         logger.info("Processing revenue for videoId: {}", videoId);
 
         if (!videoRevenueRepository.existsByVideoIdAndDate(videoId, yesterday)) {
@@ -53,9 +53,13 @@ public class DayRevenueProcessor implements ItemProcessor<Long, VideoRevenue> {
             BigDecimal adRevenue = calculateRevenue(totalAdViewCount, dailyAdViewCount, RevenueType.AD);
             BigDecimal totalRevenue = viewRevenue.add(adRevenue);
 
+            long endTime = System.currentTimeMillis();
+            logger.info("Revenue processing for videoId {} completed in {} ms", videoId, (endTime - startTime));
+
             return new VideoRevenue(videoId, yesterday, viewRevenue, adRevenue, totalRevenue);
         } else {
-            logger.info("Duplicate revenue data exists: video_id={}, date={}", videoId, yesterday);
+            long endTime = System.currentTimeMillis();
+            logger.info("Duplicate revenue data for videoId {} checked in {} ms", videoId, (endTime - startTime));
             return null;
         }
     }

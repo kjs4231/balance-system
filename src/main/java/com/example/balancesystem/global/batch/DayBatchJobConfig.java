@@ -9,6 +9,7 @@ import com.example.balancesystem.global.videorevenue.dsl.VideoRevenueRepository;
 import com.example.balancesystem.global.videostats.VideoStatistics;
 import com.example.balancesystem.global.videostats.dsl.VideoStatisticsRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.JobParametersBuilder;
 import org.springframework.batch.core.Step;
@@ -23,6 +24,8 @@ import org.springframework.core.task.TaskExecutor;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.DefaultTransactionDefinition;
 
 import java.time.LocalDate;
 
@@ -30,6 +33,7 @@ import java.time.LocalDate;
 @EnableBatchProcessing
 @RequiredArgsConstructor
 @EnableScheduling
+@Slf4j
 public class DayBatchJobConfig {
 
     private final JobRepository jobRepository;
@@ -72,8 +76,12 @@ public class DayBatchJobConfig {
 
     @Bean
     public Step dayStatisticsStep() {
+        TransactionStatus transactionStatus = transactionManager.getTransaction(new DefaultTransactionDefinition());
+        log.info("Transaction status: isNewTransaction={}, isCompleted={}",
+                transactionStatus.isNewTransaction(),
+                transactionStatus.isCompleted());
         return new StepBuilder("dayStatisticsStep", jobRepository)
-                .<Long, VideoStatistics>chunk(10, transactionManager)
+                .<Long, VideoStatistics>chunk(1000, transactionManager)
                 .reader(videoIdReader(videoRepository))
                 .processor(new DayStatisticsProcessor(videoStatisticsRepository, playHistoryRepository))
                 .writer(statisticsWriter)
@@ -88,7 +96,7 @@ public class DayBatchJobConfig {
     @Bean
     public Step dayRevenueStep() {
         return new StepBuilder("dayRevenueStep", jobRepository)
-                .<Long, VideoRevenue>chunk(10, transactionManager)
+                .<Long, VideoRevenue>chunk(1000, transactionManager)
                 .reader(videoIdReader(videoRepository))
                 .processor(new DayRevenueProcessor(videoRepository, videoRevenueRepository, revenueRateRepository, videoStatisticsRepository, playHistoryRepository))
                 .writer(revenueWriter)
@@ -121,9 +129,9 @@ public class DayBatchJobConfig {
     @Bean
     public TaskExecutor threadPoolTaskExecutor() {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-        executor.setCorePoolSize(10);
-        executor.setMaxPoolSize(20);
-        executor.setQueueCapacity(50);
+        executor.setCorePoolSize(4);
+        executor.setMaxPoolSize(8);
+        executor.setQueueCapacity(20);
         executor.setThreadNamePrefix("BatchExecutor-");
         executor.initialize();
         return executor;
