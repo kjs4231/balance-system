@@ -8,12 +8,9 @@ import com.example.balancesystem.global.videorevenue.dsl.VideoRevenueRepository;
 import com.example.balancesystem.global.videostats.VideoStatistics;
 import com.example.balancesystem.global.videostats.dsl.VideoStatisticsRepository;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.Job;
-import org.springframework.batch.core.JobParametersBuilder;
 import org.springframework.batch.core.Step;
 import org.springframework.batch.core.configuration.annotation.EnableBatchProcessing;
-import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.core.job.builder.JobBuilder;
 import org.springframework.batch.core.partition.support.TaskExecutorPartitionHandler;
 import org.springframework.batch.core.repository.JobRepository;
@@ -24,8 +21,6 @@ import org.springframework.core.task.TaskExecutor;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.transaction.PlatformTransactionManager;
-
-import java.time.LocalDate;
 
 @Configuration
 @EnableBatchProcessing
@@ -46,19 +41,15 @@ public class DayBatchJobConfig {
     @Bean
     public Job dayStatisticsJob() {
         return new JobBuilder("dayStatisticsJob", jobRepository)
-                .incrementer(parameters -> new JobParametersBuilder(parameters)
-                        .addString("date", LocalDate.now().toString())
-                        .toJobParameters())
                 .start(partitionedDayStatisticsStep())
                 .next(partitionedDayRevenueStep())
-                .listener(new DayBatchJobListener())
                 .build();
     }
 
     @Bean
     public Step partitionedDayStatisticsStep() {
         return new StepBuilder("partitionedDayStatisticsStep", jobRepository)
-                .partitioner(dayStatisticsStep().getName(), new VideoPartitioner(videoRepository.findAllVideoIds()))
+                .partitioner(dayStatisticsStep().getName(), new VideoPartitioner(videoRepository))
                 .partitionHandler(statisticsPartitionHandler())
                 .build();
     }
@@ -66,7 +57,7 @@ public class DayBatchJobConfig {
     @Bean
     public Step partitionedDayRevenueStep() {
         return new StepBuilder("partitionedDayRevenueStep", jobRepository)
-                .partitioner(dayRevenueStep().getName(), new VideoPartitioner(videoRepository.findAllVideoIds()))
+                .partitioner(dayRevenueStep().getName(), new VideoPartitioner(videoRepository))
                 .partitionHandler(revenuePartitionHandler())
                 .build();
     }
@@ -74,30 +65,20 @@ public class DayBatchJobConfig {
     @Bean
     public Step dayStatisticsStep() {
         return new StepBuilder("dayStatisticsStep", jobRepository)
-                .<Long, VideoStatistics>chunk(1000, transactionManager)
-                .reader(videoIdReader(videoRepository))
+                .<Long, VideoStatistics>chunk(BatchConstants.CHUNK_SIZE, transactionManager)
+                .reader(new VideoIdReader(videoRepository))
                 .processor(new DayStatisticsProcessor(videoStatisticsRepository, playHistoryRepository))
                 .writer(statisticsWriter)
-                .faultTolerant()
-                .skip(Exception.class)
-                .skipLimit(3)
-                .retry(Exception.class)
-                .retryLimit(2)
                 .build();
     }
 
     @Bean
     public Step dayRevenueStep() {
         return new StepBuilder("dayRevenueStep", jobRepository)
-                .<Long, VideoRevenue>chunk(1000, transactionManager)
-                .reader(videoIdReader(videoRepository))
+                .<Long, VideoRevenue>chunk(BatchConstants.CHUNK_SIZE, transactionManager)
+                .reader(new VideoIdReader(videoRepository))
                 .processor(new DayRevenueProcessor(videoRepository, videoRevenueRepository, revenueRateRepository, videoStatisticsRepository, playHistoryRepository))
                 .writer(revenueWriter)
-                .faultTolerant()
-                .skip(Exception.class)
-                .skipLimit(3)
-                .retry(Exception.class)
-                .retryLimit(2)
                 .build();
     }
 
@@ -106,7 +87,7 @@ public class DayBatchJobConfig {
         TaskExecutorPartitionHandler handler = new TaskExecutorPartitionHandler();
         handler.setStep(dayStatisticsStep());
         handler.setTaskExecutor(threadPoolTaskExecutor());
-        handler.setGridSize(4);
+        handler.setGridSize(BatchConstants.GRID_SIZE);
         return handler;
     }
 
@@ -115,24 +96,18 @@ public class DayBatchJobConfig {
         TaskExecutorPartitionHandler handler = new TaskExecutorPartitionHandler();
         handler.setStep(dayRevenueStep());
         handler.setTaskExecutor(threadPoolTaskExecutor());
-        handler.setGridSize(4);
+        handler.setGridSize(BatchConstants.GRID_SIZE);
         return handler;
     }
 
     @Bean
     public TaskExecutor threadPoolTaskExecutor() {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-        executor.setCorePoolSize(10);
-        executor.setMaxPoolSize(20);
-        executor.setQueueCapacity(50);
+        executor.setCorePoolSize(16);
+        executor.setMaxPoolSize(32);
+        executor.setQueueCapacity(100);
         executor.setThreadNamePrefix("BatchExecutor-");
         executor.initialize();
         return executor;
-    }
-
-    @Bean
-    @StepScope
-    public VideoIdReader videoIdReader(VideoRepository videoRepository) {
-        return new VideoIdReader(videoRepository);
     }
 }

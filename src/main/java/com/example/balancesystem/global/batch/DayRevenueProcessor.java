@@ -16,6 +16,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 public class DayRevenueProcessor implements ItemProcessor<Long, VideoRevenue> {
     private static final Logger logger = LoggerFactory.getLogger(DayRevenueProcessor.class);
@@ -45,8 +46,14 @@ public class DayRevenueProcessor implements ItemProcessor<Long, VideoRevenue> {
         if (!videoRevenueRepository.existsByVideoIdAndDate(videoId, yesterday)) {
             long totalViewCount = videoRepository.getViewCountByVideoId(videoId);
             long totalAdViewCount = videoRepository.getAdViewCountByVideoId(videoId);
-            long dailyViewCount = videoStatisticsRepository.getDailyViewCountByVideoId(videoId, yesterday);
-            long dailyAdViewCount = videoStatisticsRepository.getDailyAdViewCountByVideoId(videoId, yesterday);
+
+            // Null-safe retrieval using Optional
+            long dailyViewCount = Optional.ofNullable(
+                    videoStatisticsRepository.getDailyViewCountByVideoId(videoId, yesterday)
+            ).orElse(0L);
+            long dailyAdViewCount = Optional.ofNullable(
+                    videoStatisticsRepository.getDailyAdViewCountByVideoId(videoId, yesterday)
+            ).orElse(0L);
 
             BigDecimal viewRevenue = calculateRevenue(totalViewCount, dailyViewCount, RevenueType.VIDEO);
             BigDecimal adRevenue = calculateRevenue(totalAdViewCount, dailyAdViewCount, RevenueType.AD);

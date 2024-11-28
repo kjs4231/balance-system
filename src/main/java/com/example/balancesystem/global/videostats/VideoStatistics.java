@@ -22,13 +22,13 @@ public class VideoStatistics {
     private LocalDate date;
 
     @Column(nullable = false)
-    private Long viewCount;
+    private Long viewCount = 0L;
 
     @Column(nullable = false)
-    private Long totalPlayTime;
+    private Long totalPlayTime = 0L;
 
     @Column(nullable = false)
-    private Long adViewCount;
+    private Long adViewCount = 0L;
 
     public VideoStatistics(Long videoId, LocalDate date, Long viewCount, Long totalPlayTime, Long adViewCount) {
         this.videoId = videoId;

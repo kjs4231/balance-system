@@ -6,7 +6,6 @@ import org.springframework.data.domain.Pageable;
 import java.util.List;
 
 public interface CustomVideoRepository {
-
     Long getViewCountByVideoId(Long videoId);
 
     Long getAdViewCountByVideoId(Long videoId);
@@ -14,4 +13,8 @@ public interface CustomVideoRepository {
     List<Long> findAllVideoIds();
 
     Page<Long> findAllVideoIds(Pageable pageable);
+
+    Long getMinId();
+    Long getMaxId();
+    List<Long> findVideoIdsByRange(Long minId, Long maxId);
 }
