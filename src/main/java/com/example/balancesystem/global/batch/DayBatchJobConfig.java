@@ -47,10 +47,6 @@ public class DayBatchJobConfig {
     private final RevenueWriter revenueWriter;
     private final StatisticsWriter statisticsWriter;
 
-    private final ConcurrentHashMap<RevenueType, List<RevenueRate>> revenueRateCache = new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<Long, Long> cachedPlayTime = new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<Long, Long> cachedViewCount = new ConcurrentHashMap<>();
-
     @Bean
     public Job dayStatisticsJob() {
         return new JobBuilder("dayStatisticsJob", jobRepository)
@@ -82,9 +78,9 @@ public class DayBatchJobConfig {
     @Bean
     public Step dayStatisticsStep() {
         return new StepBuilder("dayStatisticsStep", jobRepository)
-                .<Long, VideoStatistics>chunk(10, transactionManager)
+                .<Long, VideoStatistics>chunk(100, transactionManager)
                 .reader(videoIdReader(videoRepository))
-                .processor(new DayStatisticsProcessor(videoStatisticsRepository, playHistoryRepository, cachedPlayTime, cachedViewCount))
+                .processor(new DayStatisticsProcessor(videoStatisticsRepository, playHistoryRepository))
                 .writer(statisticsWriter)
                 .faultTolerant()
                 .skip(Exception.class)
@@ -97,9 +93,9 @@ public class DayBatchJobConfig {
     @Bean
     public Step dayRevenueStep() {
         return new StepBuilder("dayRevenueStep", jobRepository)
-                .<Long, VideoRevenue>chunk(10, transactionManager)
+                .<Long, VideoRevenue>chunk(100, transactionManager)
                 .reader(videoIdReader(videoRepository))
-                .processor(new DayRevenueProcessor(videoRepository, videoRevenueRepository, revenueRateRepository, videoStatisticsRepository, playHistoryRepository, revenueRateCache))
+                .processor(new DayRevenueProcessor(videoRepository, videoRevenueRepository, revenueRateRepository, videoStatisticsRepository))
                 .writer(revenueWriter)
                 .faultTolerant()
                 .skip(Exception.class)

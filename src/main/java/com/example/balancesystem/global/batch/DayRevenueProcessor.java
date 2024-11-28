@@ -1,7 +1,6 @@
 package com.example.balancesystem.global.batch;
 
 import com.example.balancesystem.domain.content.video.dsl.VideoRepository;
-import com.example.balancesystem.domain.content.playhistory.dsl.PlayHistoryRepository;
 import com.example.balancesystem.global.revenuerate.RevenueRate;
 import com.example.balancesystem.global.revenuerate.RevenueType;
 import com.example.balancesystem.global.revenuerate.dsl.RevenueRateRepository;
@@ -16,7 +15,6 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.List;
-import java.util.concurrent.ConcurrentHashMap;
 
 public class DayRevenueProcessor implements ItemProcessor<Long, VideoRevenue> {
     private static final Logger logger = LoggerFactory.getLogger(DayRevenueProcessor.class);
@@ -24,20 +22,15 @@ public class DayRevenueProcessor implements ItemProcessor<Long, VideoRevenue> {
     private final VideoRevenueRepository videoRevenueRepository;
     private final RevenueRateRepository revenueRateRepository;
     private final VideoStatisticsRepository videoStatisticsRepository;
-    private final PlayHistoryRepository playHistoryRepository;
-    private final ConcurrentHashMap<RevenueType, List<RevenueRate>> revenueRateCache;
 
     public DayRevenueProcessor(VideoRepository videoRepository,
                                VideoRevenueRepository videoRevenueRepository,
                                RevenueRateRepository revenueRateRepository,
-                               VideoStatisticsRepository videoStatisticsRepository, PlayHistoryRepository playHistoryRepository,
-                               ConcurrentHashMap<RevenueType, List<RevenueRate>> revenueRateCache) {
+                               VideoStatisticsRepository videoStatisticsRepository) {
         this.videoRepository = videoRepository;
         this.videoRevenueRepository = videoRevenueRepository;
         this.revenueRateRepository = revenueRateRepository;
         this.videoStatisticsRepository = videoStatisticsRepository;
-        this.playHistoryRepository = playHistoryRepository;
-        this.revenueRateCache = revenueRateCache;
     }
 
     @Override
@@ -45,6 +38,7 @@ public class DayRevenueProcessor implements ItemProcessor<Long, VideoRevenue> {
         LocalDate yesterday = LocalDate.now().minusDays(1);
         logger.info("Processing revenue for videoId: {}", videoId);
 
+        // 중복 확인
         if (!videoRevenueRepository.existsByVideoIdAndDate(videoId, yesterday)) {
             long totalViewCount = videoRepository.getViewCountByVideoId(videoId);
             long totalAdViewCount = videoRepository.getAdViewCountByVideoId(videoId);
@@ -65,8 +59,7 @@ public class DayRevenueProcessor implements ItemProcessor<Long, VideoRevenue> {
     private BigDecimal calculateRevenue(long totalViews, long dailyViews, RevenueType revenueType) {
         BigDecimal revenue = BigDecimal.ZERO;
         long remainingViews = dailyViews;
-        List<RevenueRate> rates = revenueRateCache.computeIfAbsent(revenueType,
-                type -> revenueRateRepository.findAllByTypeOrderByMinViewsAsc(type));
+        List<RevenueRate> rates = revenueRateRepository.findAllByTypeOrderByMinViewsAsc(revenueType);
         long cumulativeViews = totalViews - dailyViews;
 
         for (RevenueRate rate : rates) {
