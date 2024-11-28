@@ -57,26 +57,4 @@ public class CustomVideoRepositoryImpl implements CustomVideoRepository {
 
         return new PageImpl<>(content, pageable, total);
     }
-
-    @Override
-    public Long getMinId() {
-        return queryFactory.select(QVideo.video.videoId.min())
-                .from(QVideo.video)
-                .fetchOne();
-    }
-
-    @Override
-    public Long getMaxId() {
-        return queryFactory.select(QVideo.video.videoId.max())
-                .from(QVideo.video)
-                .fetchOne();
-    }
-
-    @Override
-    public List<Long> findVideoIdsByRange(Long minId, Long maxId) {
-        return queryFactory.select(QVideo.video.videoId)
-                .from(QVideo.video)
-                .where(QVideo.video.videoId.between(minId, maxId))
-                .fetch();
-    }
 }

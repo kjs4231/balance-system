@@ -7,11 +7,13 @@ import org.springframework.batch.item.Chunk;
 import org.springframework.batch.item.ItemWriter;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Component
+@Transactional
 public class RevenueWriter implements ItemWriter<VideoRevenue> {
 
     private static final Logger logger = LoggerFactory.getLogger(RevenueWriter.class);
@@ -23,11 +25,10 @@ public class RevenueWriter implements ItemWriter<VideoRevenue> {
 
     @Override
     public void write(Chunk<? extends VideoRevenue> items) throws Exception {
-        logger.info("Writing {} revenue records", items.size());
+        logger.info("정산 size: {}", items.size());
 
         String sql = "INSERT INTO video_revenue (video_id, date, view_revenue, ad_revenue, total_revenue) " +
-                "VALUES (?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE " +
-                "view_revenue = VALUES(view_revenue), ad_revenue = VALUES(ad_revenue), total_revenue = VALUES(total_revenue)";
+                "VALUES (?, ?, ?, ?, ?)";
 
         List<Object[]> batchArgs = items.getItems().stream()
                 .map(revenue -> new Object[] {
@@ -40,6 +41,6 @@ public class RevenueWriter implements ItemWriter<VideoRevenue> {
                 .collect(Collectors.toList());
 
         int[] updateCounts = jdbcTemplate.batchUpdate(sql, batchArgs);
-        logger.info("Rows affected: {}", updateCounts.length);
+        logger.info("Inserted rows: {}", updateCounts.length);
     }
 }

@@ -4,13 +4,12 @@ import com.example.balancesystem.domain.content.video.dsl.VideoRepository;
 import org.springframework.batch.core.ExitStatus;
 import org.springframework.batch.core.StepExecution;
 import org.springframework.batch.core.StepExecutionListener;
+import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.item.ItemReader;
-import org.springframework.stereotype.Component;
 
 import java.util.Iterator;
 import java.util.List;
 
-@Component
 public class VideoIdReader implements ItemReader<Long>, StepExecutionListener {
 
     private final VideoRepository videoRepository;
@@ -22,11 +21,12 @@ public class VideoIdReader implements ItemReader<Long>, StepExecutionListener {
 
     @Override
     public void beforeStep(StepExecution stepExecution) {
-        long minId = stepExecution.getExecutionContext().getLong("minId");
-        long maxId = stepExecution.getExecutionContext().getLong("maxId");
-
-        List<Long> videoIds = videoRepository.findVideoIdsByRange(minId, maxId);
-        this.videoIdIterator = videoIds.iterator();
+        ExecutionContext executionContext = stepExecution.getExecutionContext();
+        List<Long> videoIds = (List<Long>) executionContext.get("videoIds");
+        if (videoIds != null) {
+            this.videoIdIterator = videoIds.iterator();
+            System.out.println("Received videoIds for partition: " + videoIds);
+        }
     }
 
     @Override
@@ -36,7 +36,6 @@ public class VideoIdReader implements ItemReader<Long>, StepExecutionListener {
 
     @Override
     public ExitStatus afterStep(StepExecution stepExecution) {
-        // Cleanup if needed or additional logic
         return ExitStatus.COMPLETED;
     }
 }

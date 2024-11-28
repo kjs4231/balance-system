@@ -8,7 +8,7 @@ import java.time.LocalDate;
 
 @Entity
 @Getter
-@Table(name = "video_revenue", uniqueConstraints = @UniqueConstraint(columnNames = {"video_id", "date"}))
+@Table(name = "video_revenue")
 public class VideoRevenue {
 
     @Id
@@ -18,14 +18,9 @@ public class VideoRevenue {
     private Long videoId;
 
     private LocalDate date;
-    @Column(nullable = false, precision = 19, scale = 2)
-    private BigDecimal viewRevenue = BigDecimal.ZERO;
-
-    @Column(nullable = false, precision = 19, scale = 2)
-    private BigDecimal adRevenue = BigDecimal.ZERO;
-
-    @Column(nullable = false, precision = 19, scale = 2)
-    private BigDecimal totalRevenue = BigDecimal.ZERO;
+    private BigDecimal viewRevenue;
+    private BigDecimal adRevenue;
+    private BigDecimal totalRevenue;
 
     protected VideoRevenue() {
     }

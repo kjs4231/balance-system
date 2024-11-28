@@ -10,7 +10,6 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Optional;
 
 @Repository
 public class CustomVideoStatisticsRepositoryImpl implements CustomVideoStatisticsRepository {
@@ -72,21 +71,21 @@ public class CustomVideoStatisticsRepositoryImpl implements CustomVideoStatistic
                 .fetch();
     }
 
+    @Override
     public Long getDailyViewCountByVideoId(Long videoId, LocalDate date) {
-        return Optional.ofNullable(queryFactory.select(QVideoStatistics.videoStatistics.viewCount)
-                        .from(QVideoStatistics.videoStatistics)
-                        .where(QVideoStatistics.videoStatistics.videoId.eq(videoId)
-                                .and(QVideoStatistics.videoStatistics.date.eq(date)))
-                        .fetchOne())
-                .orElse(0L); // 기본값 처리
+        return queryFactory.select(QVideoStatistics.videoStatistics.viewCount.sum())
+                .from(QVideoStatistics.videoStatistics)
+                .where(QVideoStatistics.videoStatistics.videoId.eq(videoId)
+                        .and(QVideoStatistics.videoStatistics.date.eq(date)))
+                .fetchOne();
     }
 
+    @Override
     public Long getDailyAdViewCountByVideoId(Long videoId, LocalDate date) {
-        return Optional.ofNullable(queryFactory.select(QVideoStatistics.videoStatistics.adViewCount)
-                        .from(QVideoStatistics.videoStatistics)
-                        .where(QVideoStatistics.videoStatistics.videoId.eq(videoId)
-                                .and(QVideoStatistics.videoStatistics.date.eq(date)))
-                        .fetchOne())
-                .orElse(0L); // 기본값 처리
+        return queryFactory.select(QVideoStatistics.videoStatistics.adViewCount.sum())
+                .from(QVideoStatistics.videoStatistics)
+                .where(QVideoStatistics.videoStatistics.videoId.eq(videoId)
+                        .and(QVideoStatistics.videoStatistics.date.eq(date)))
+                .fetchOne();
     }
 }

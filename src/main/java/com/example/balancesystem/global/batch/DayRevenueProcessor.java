@@ -1,7 +1,7 @@
 package com.example.balancesystem.global.batch;
 
-import com.example.balancesystem.domain.content.playhistory.dsl.PlayHistoryRepository;
 import com.example.balancesystem.domain.content.video.dsl.VideoRepository;
+import com.example.balancesystem.domain.content.playhistory.dsl.PlayHistoryRepository;
 import com.example.balancesystem.global.revenuerate.RevenueRate;
 import com.example.balancesystem.global.revenuerate.RevenueType;
 import com.example.balancesystem.global.revenuerate.dsl.RevenueRateRepository;
@@ -16,7 +16,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class DayRevenueProcessor implements ItemProcessor<Long, VideoRevenue> {
     private static final Logger logger = LoggerFactory.getLogger(DayRevenueProcessor.class);
@@ -25,17 +25,19 @@ public class DayRevenueProcessor implements ItemProcessor<Long, VideoRevenue> {
     private final RevenueRateRepository revenueRateRepository;
     private final VideoStatisticsRepository videoStatisticsRepository;
     private final PlayHistoryRepository playHistoryRepository;
+    private final ConcurrentHashMap<RevenueType, List<RevenueRate>> revenueRateCache;
 
     public DayRevenueProcessor(VideoRepository videoRepository,
                                VideoRevenueRepository videoRevenueRepository,
                                RevenueRateRepository revenueRateRepository,
-                               VideoStatisticsRepository videoStatisticsRepository,
-                               PlayHistoryRepository playHistoryRepository) {
+                               VideoStatisticsRepository videoStatisticsRepository, PlayHistoryRepository playHistoryRepository,
+                               ConcurrentHashMap<RevenueType, List<RevenueRate>> revenueRateCache) {
         this.videoRepository = videoRepository;
         this.videoRevenueRepository = videoRevenueRepository;
         this.revenueRateRepository = revenueRateRepository;
         this.videoStatisticsRepository = videoStatisticsRepository;
         this.playHistoryRepository = playHistoryRepository;
+        this.revenueRateCache = revenueRateCache;
     }
 
     @Override
@@ -46,14 +48,8 @@ public class DayRevenueProcessor implements ItemProcessor<Long, VideoRevenue> {
         if (!videoRevenueRepository.existsByVideoIdAndDate(videoId, yesterday)) {
             long totalViewCount = videoRepository.getViewCountByVideoId(videoId);
             long totalAdViewCount = videoRepository.getAdViewCountByVideoId(videoId);
-
-            // Null-safe retrieval using Optional
-            long dailyViewCount = Optional.ofNullable(
-                    videoStatisticsRepository.getDailyViewCountByVideoId(videoId, yesterday)
-            ).orElse(0L);
-            long dailyAdViewCount = Optional.ofNullable(
-                    videoStatisticsRepository.getDailyAdViewCountByVideoId(videoId, yesterday)
-            ).orElse(0L);
+            long dailyViewCount = videoStatisticsRepository.getDailyViewCountByVideoId(videoId, yesterday);
+            long dailyAdViewCount = videoStatisticsRepository.getDailyAdViewCountByVideoId(videoId, yesterday);
 
             BigDecimal viewRevenue = calculateRevenue(totalViewCount, dailyViewCount, RevenueType.VIDEO);
             BigDecimal adRevenue = calculateRevenue(totalAdViewCount, dailyAdViewCount, RevenueType.AD);
@@ -69,7 +65,8 @@ public class DayRevenueProcessor implements ItemProcessor<Long, VideoRevenue> {
     private BigDecimal calculateRevenue(long totalViews, long dailyViews, RevenueType revenueType) {
         BigDecimal revenue = BigDecimal.ZERO;
         long remainingViews = dailyViews;
-        List<RevenueRate> rates = revenueRateRepository.findAllByTypeOrderByMinViewsAsc(revenueType);
+        List<RevenueRate> rates = revenueRateCache.computeIfAbsent(revenueType,
+                type -> revenueRateRepository.findAllByTypeOrderByMinViewsAsc(type));
         long cumulativeViews = totalViews - dailyViews;
 
         for (RevenueRate rate : rates) {
