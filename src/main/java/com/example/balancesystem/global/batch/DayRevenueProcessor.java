@@ -11,8 +11,6 @@ import com.example.balancesystem.global.videostats.dsl.VideoStatisticsRepository
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.batch.item.ItemProcessor;
-import org.springframework.transaction.annotation.Propagation;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -27,8 +25,10 @@ public class DayRevenueProcessor implements ItemProcessor<Long, VideoRevenue> {
     private final VideoStatisticsRepository videoStatisticsRepository;
     private final PlayHistoryRepository playHistoryRepository;
 
-    public DayRevenueProcessor(VideoRepository videoRepository, VideoRevenueRepository videoRevenueRepository,
-                               RevenueRateRepository revenueRateRepository, VideoStatisticsRepository videoStatisticsRepository,
+    public DayRevenueProcessor(VideoRepository videoRepository,
+                               VideoRevenueRepository videoRevenueRepository,
+                               RevenueRateRepository revenueRateRepository,
+                               VideoStatisticsRepository videoStatisticsRepository,
                                PlayHistoryRepository playHistoryRepository) {
         this.videoRepository = videoRepository;
         this.videoRevenueRepository = videoRevenueRepository;
@@ -36,11 +36,10 @@ public class DayRevenueProcessor implements ItemProcessor<Long, VideoRevenue> {
         this.videoStatisticsRepository = videoStatisticsRepository;
         this.playHistoryRepository = playHistoryRepository;
     }
+
     @Override
-    //    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public VideoRevenue process(Long videoId) {
-        long startTime = System.currentTimeMillis();
-        LocalDate yesterday = LocalDate.now();
+        LocalDate yesterday = LocalDate.now().minusDays(1);
         logger.info("Processing revenue for videoId: {}", videoId);
 
         if (!videoRevenueRepository.existsByVideoIdAndDate(videoId, yesterday)) {
@@ -53,13 +52,9 @@ public class DayRevenueProcessor implements ItemProcessor<Long, VideoRevenue> {
             BigDecimal adRevenue = calculateRevenue(totalAdViewCount, dailyAdViewCount, RevenueType.AD);
             BigDecimal totalRevenue = viewRevenue.add(adRevenue);
 
-            long endTime = System.currentTimeMillis();
-            logger.info("Revenue processing for videoId {} completed in {} ms", videoId, (endTime - startTime));
-
             return new VideoRevenue(videoId, yesterday, viewRevenue, adRevenue, totalRevenue);
         } else {
-            long endTime = System.currentTimeMillis();
-            logger.info("Duplicate revenue data for videoId {} checked in {} ms", videoId, (endTime - startTime));
+            logger.info("Duplicate revenue data exists: video_id={}, date={}", videoId, yesterday);
             return null;
         }
     }

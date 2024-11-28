@@ -16,15 +16,15 @@ public class DayStatisticsProcessor implements ItemProcessor<Long, VideoStatisti
     private final VideoStatisticsRepository videoStatisticsRepository;
     private final PlayHistoryRepository playHistoryRepository;
 
-    public DayStatisticsProcessor(VideoStatisticsRepository videoStatisticsRepository, PlayHistoryRepository playHistoryRepository) {
+    public DayStatisticsProcessor(VideoStatisticsRepository videoStatisticsRepository,
+                                  PlayHistoryRepository playHistoryRepository) {
         this.videoStatisticsRepository = videoStatisticsRepository;
         this.playHistoryRepository = playHistoryRepository;
     }
+
     @Override
-    //    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public VideoStatistics process(Long videoId) {
-        long startTime = System.currentTimeMillis();
-        LocalDate yesterday = LocalDate.now();
+        LocalDate yesterday = LocalDate.now().minusDays(1);
         logger.info("Processing statistics for videoId: {}", videoId);
 
         if (!videoStatisticsRepository.existsByVideoIdAndDate(videoId, yesterday)) {
@@ -32,15 +32,13 @@ public class DayStatisticsProcessor implements ItemProcessor<Long, VideoStatisti
             long viewCount = playHistoryRepository.countByVideoIdAndDate(videoId, yesterday);
             long adViewCount = playHistoryRepository.countAdViewsByVideoIdAndDate(videoId, yesterday);
 
-            long endTime = System.currentTimeMillis();
-            logger.info("Statistics processing for videoId {} completed in {} ms", videoId, (endTime - startTime));
+            logger.info("VideoId: {}, PlayTime: {}, ViewCount: {}, AdViewCount: {}",
+                    videoId, totalPlayTime, viewCount, adViewCount);
 
             return new VideoStatistics(videoId, yesterday, viewCount, totalPlayTime, adViewCount);
         } else {
-            long endTime = System.currentTimeMillis();
-            logger.info("Duplicate statistics data for videoId {} checked in {} ms", videoId, (endTime - startTime));
+            logger.info("Skipping statistics for videoId: {} as it already exists.", videoId);
             return null;
         }
     }
-
 }

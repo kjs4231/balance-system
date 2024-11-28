@@ -24,9 +24,9 @@ public class TestDataService {
     private final PlayHistoryRepository playHistoryRepository;
     private final AdHistoryRepository adHistoryRepository;
 
-    private static final int VIDEO_COUNT = 5000; // 비디오 개수 고정
-    private static final int PLAY_HISTORY_COUNT = 1000000; // 시청 기록 개수 고정
-    private static final LocalDate FIXED_DATE = LocalDate.of(2024, 11, 20); // 고정된 날짜
+    private static final int VIDEO_COUNT = 6400; // 비디오 개수 고정
+    private static final int PLAY_HISTORY_COUNT = 5000000; // 시청 기록 개수 고정
+    private static final LocalDate FIXED_DATE = LocalDate.of(2024, 11, 27); // 고정된 날짜
 
     // 1. 비디오 데이터 생성
     public void generateTestVideos() {
