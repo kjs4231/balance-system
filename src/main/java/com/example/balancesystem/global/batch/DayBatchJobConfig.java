@@ -74,7 +74,7 @@ public class DayBatchJobConfig {
     @Bean
     public Step dayStatisticsStep() {
         return new StepBuilder("dayStatisticsStep", jobRepository)
-                .<Long, VideoStatistics>chunk(10, transactionManager)
+                .<Long, VideoStatistics>chunk(1000, transactionManager)
                 .reader(videoIdReader(videoRepository))
                 .processor(new DayStatisticsProcessor(videoStatisticsRepository, playHistoryRepository))
                 .writer(statisticsWriter)
@@ -89,7 +89,7 @@ public class DayBatchJobConfig {
     @Bean
     public Step dayRevenueStep() {
         return new StepBuilder("dayRevenueStep", jobRepository)
-                .<Long, VideoRevenue>chunk(10, transactionManager)
+                .<Long, VideoRevenue>chunk(1000, transactionManager)
                 .reader(videoIdReader(videoRepository))
                 .processor(new DayRevenueProcessor(videoRepository, videoRevenueRepository, revenueRateRepository, videoStatisticsRepository, playHistoryRepository))
                 .writer(revenueWriter)
